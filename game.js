@@ -678,12 +678,14 @@ ASSET_MANAGER.downloadAll(function () {
 
 
     var goodie = new Goodie(gameEngine, 300, 300);
+    var goodie2 = new Goodie(gameEngine, 400, 400);
     var wulf = new Wulf(gameEngine);
     var frank = new Frank(gameEngine, wulf);
     var walls = [];
     var wall = new Wall(gameEngine, 128, 128);
     walls.push(wall);
     walls.push(goodie);
+    walls.push(goodie2);
     walls.push(frank);
     walls.push(wulf);
     gameEngine.addEntity(gameboard);
