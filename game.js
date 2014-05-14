@@ -60,6 +60,61 @@ AssetManager.prototype.getAsset = function(path){
     return this.cache[path];
 }
 
+function Animation(spriteSheet, startX, startY, frameWidth, frameHeight, frameDuration, frames, loop, reverse) {
+    this.spriteSheet = spriteSheet;
+    this.startX = startX;
+    this.startY = startY;
+    this.frameWidth = frameWidth;
+    this.frameDuration = frameDuration;
+    this.frameHeight = frameHeight;
+    this.frames = frames;
+    this.totalTime = frameDuration*frames;
+    this.elapsedTime = 0;
+    this.loop = loop;
+    this.reverse = reverse;
+}
+
+Animation.prototype.drawFrame = function (tick, ctx, x, y, scaleBy) {
+    var scaleBy = scaleBy || 1;
+    this.elapsedTime += tick;
+    if (this.loop) {
+        if (this.isDone()) {
+            this.elapsedTime = 0;
+        }
+    } else if (this.isDone()) {
+        return;
+    }
+    
+    var index = this.currentFrame();
+    var vindex = 0;
+    
+    if ((index+1) * this.frameWidth + this.startX > this.spriteSheet.width) {
+        index -= Math.floor((this.spriteSheet.width - this.startX) / this.frameWidth);
+        vindex++;
+    }
+    while ((index + 1) * this.frameWidth > this.spriteSheet.width) {
+        index -= Math.floor(this.spriteSheet.width / this.frameWidth);
+        vindex++;
+    }
+    
+    
+    var locX = x;
+    var locY = y;
+    ctx.drawImage(this.spriteSheet,
+                  index * this.frameWidth, vindex*this.frameHeight + this.startY,  // source from sheet
+                  this.frameWidth, this.frameHeight,
+                  locX, locY,
+                  this.frameWidth * scaleBy,
+                  this.frameHeight * scaleBy);
+}
+
+Animation.prototype.currentFrame = function () {
+    return Math.floor(this.elapsedTime / this.frameDuration);
+}
+
+Animation.prototype.isDone = function () {
+    return (this.elapsedTime >= this.totalTime);
+}
 
 function Timer() {
     this.gameTime = 0;
@@ -67,12 +122,11 @@ function Timer() {
     this.wallLastTimestamp = 0;
 }
 
-
-Timer.prototype.tick = function() {
+Timer.prototype.tick = function () {
     var wallCurrent = Date.now();
     var wallDelta = (wallCurrent - this.wallLastTimestamp) / 1000;
     this.wallLastTimestamp = wallCurrent;
-    
+
     var gameDelta = Math.min(wallDelta, this.maxStep);
     this.gameTime += gameDelta;
     return gameDelta;
@@ -95,18 +149,7 @@ function GameEngine() {
     this.wheel = null;
     this.surfaceWidth = null;
     this.surfaceHeight = null;
-
-    // stores all the keyboard inputs
-    this.keys = {
-        a: 0, s: 0, d: 0, w: 0, space: false,
-        shift: false, q: 0, e: 0, tab: false, zero: false,
-        one: false, two: false, three: false, four: false, five: false,
-        six: false, seven: false, eight: false, nine: false, o: false, i:false
-    };
-
-    // timer variables.
-    this.timer = new Timer();
-    this.lastTime = this.timer.gameTime - this.timer.maxStep;
+    
 }
 
 // initializes the canvas manager
@@ -115,7 +158,7 @@ GameEngine.prototype.init = function (ctx) {
     this.surfaceWidth = this.ctx.canvas.width;
     this.surfaceHeight = this.ctx.canvas.height;
     this.startInput();
-
+    this.timer = new Timer();
     console.log('game initialized');
 }
 
@@ -138,12 +181,7 @@ GameEngine.prototype.startInput = function () {
         var x = e.clientX - that.ctx.canvas.getBoundingClientRect().left;
         var y = e.clientY - that.ctx.canvas.getBoundingClientRect().top;
 
-        // x is less than 1024 
-        if (x < 1024) {
-            x = Math.floor(x / 32);
-            y = Math.floor(y / 32);
-        }
-
+        
         return { x: x, y: y };
     }
 
@@ -152,82 +190,29 @@ GameEngine.prototype.startInput = function () {
     // mouse click listener
     this.ctx.canvas.addEventListener("click", function (e) {
         that.click = getXandY(e);
-        e.preventDefault();
     }, false);
 
     // mouse move listener
     this.ctx.canvas.addEventListener("mousemove", function (e) {
         that.mouse = getXandY(e);
-        e.preventDefault();
     }, false);
 
     // mouse wheel listener
     this.ctx.canvas.addEventListener("mousewheel", function (e) {
         that.wheel = e;
-        e.preventDefault();
     }, false);
+    
+    keyState = {};
+    window.addEventListener('keydown',function(e){
+        keyState[e.keyCode || e.which] = true;
+    },true);
 
-    this.ctx.canvas.addEventListener('keydown', function (e) {
-        console.log("Keydown");
-        switch (String.fromCharCode(e.which)) {
-            case 'a': that.keys.a = -5; break;
-            case 's': that.keys.s = 5; break;
-            case 'd': that.keys.d = 5; break;
-            case 'w': that.keys.w = -5; break;
-            case ' ': that.keys.space = true; break;
-            case 'q': that.keys.q = 0; break; 
-            case 'e': that.keys.e = 0; break;
-            
-        }
-        e.preventDefault();
-    }, false);
+    window.addEventListener('keyup',function(e){
+        keyState[e.keyCode || e.which] = false;
+    },true);
 
-    this.ctx.canvas.addEventListener('keyup', function (e) {
-        console.log(e.keyCode);
-        switch (String.fromCharCode(e.which)) {
-            case 'a': that.keys.a = 0; break;
-            case 's': that.keys.s = 0; break;
-            case 'd': that.keys.d = 0; break;
-            case 'w': that.keys.w = 0; break;
-            case ' ': that.keys.space = false; break;
-            case 'q': that.keys.q = 0; break;
-            case 'e': that.keys.e = 0; break;
-        }
-        e.preventDefault();
-    }, false);
 
-    this.ctx.canvas.addEventListener('keypress', function (e) {
-        switch (String.fromCharCode(e.which)) {
-            case '0': break;
-            case '1':  break;
-            case '2':  break;
-            case '3':  break;
-            case '4': break;
-            case '5': break;
-            case '6': break;
-            case '7': break;
-            case '8': break;
-            case '9': break;
-            case '\t': break;
-            case 'i': break;
-            case 'o': break;
-        }
-        e.preventDefault();
-    }, false);
     console.log('Input started');
-}
-
-// finds and returns the entities of all collisions involving the entity.
-GameEngine.prototype.collisions = function (entity) {
-   
-    // loop thru the entities list
-    for (var i = 0; i < this.entities.length; i++) {
-        // if they have collided with anything addit it to the collide list.
-        if (entity != this.entities[i] && entity.collisionCheck(this.entities[i])) {
-            return true;
-        }
-    }
-    return false;
 }
 
 // adds the entity to the Game Eng. (Asset mngr)
@@ -271,63 +256,25 @@ GameEngine.prototype.update = function () {
 // calls updae and draw,
 // sets click and wheel to null
 GameEngine.prototype.loop = function () {
+    this.clockTick = this.timer.tick();
     this.update();
-    this.timer.tick();
-    // limites the drawing to a steady pace linked to the game timer.
-    if (this.lastTime + this.timer.maxStep <= this.timer.gameTime) {
-        this.draw();
-        this.lastTime = this.timer.gameTime;
-    }
+    this.draw();
+    //this.forward = null;
     this.click = null;
     this.wheel = null;
+    this.forward = null;
+    this.backward = null;
+    this.left = null;
+    this.right = null;
 }
 
 // Entity 'Class'
 // container for a drawable object
-function Entity(game, x, y, collide) {
+function Entity(game, x, y) {
     this.game = game;
     this.x = x;
     this.y = y;
-    // all the collision detection information
-    if (collide) {
-        this.collide = collide;
-    } else {
-        this.collide = { radius: 0, width: 0, height: 0 };
-    }
     this.removeFromWorld = false;
-}
-
-// returns true if no collision has happened.
-// else returns false.
-Entity.prototype.collisionCheck = function (entity) {
-
-    var y_delta = this.y - entity.y;
-    var x_delta = this.x - entity.x;
-
-    // if this.collide.radius === -10 than its the game board and we will check bounds.
-    if (entity.collide.radius === -10) {
-        if (this.x - this.collide.width > entity.x + entity.line * 2 && 
-            this.x + this.collide.width < entity.x + entity.collide.width &&
-            this.y + this.collide.height < entity.y + entity.collide.height &&
-            this.y - this.collide.height > entity.y + entity.line * 2) {
-            return false; // not colliding with the boundary.
-        } else {
-            return true; // else we are outside the boundary.
-        }
-      // if the entity has a radius larger than zero then apply 
-    } else if (entity.collide.radius > 0) {
-        if (Math.sqrt((x_delta * x_delta) + (y_delta * y_delta)) < 20) {
-            return true;
-        } else { // else check if via the sqaure check method.
-            return false;
-        }
-    } else if (Math.abs(x_delta) <= this.collide.width + entity.collide.width && 
-               Math.abs(y_delta) <= this.collide.height + entity.collide.height) {
-        return true;
-    }
-    // else return false.
-    return false;
-
 }
 
 // default updates the entity. 
@@ -336,13 +283,7 @@ Entity.prototype.update = function () {
 
 // default draw function
 Entity.prototype.draw = function (ctx) {
-    if (this.game.showOutlines && this.radius) {
-        ctx.beginPath();
-        ctx.strokeStyle = "green";
-        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false);
-        ctx.stroke();
-        ctx.closePath();
-    }
+    
 }
 
 // rotates the image and returns a canvas with the newly
@@ -364,15 +305,381 @@ Entity.prototype.rotateAndCache = function (image, angle) {
     return offscreenCanvas;
 }
 
+function Bullet (game, entity) {
+    this.x = entity.x + 12;
+    this.y = entity.y + 22;
+    this.initialX = this.x;
+    this.initialY = this.y;
+    this.endx = game.mouse.x;
+    this.endy = game.mouse.y;
+    this.speed = 5;
+    this.radius = 3;
+    this.boundingbox = new BoundingBox(this.x - this.radius, this.y - this.radius, 2 * this.radius, 2 * this.radius);
+    Entity.call(this, game, this.x, this.y);
+    //this.speed = entity.gun.speed;
+    
+}
+Bullet.prototype = new Entity();
+Wulf.prototype.constructor = Bullet;
+
+
+Bullet.prototype.update = function () {
+    //var slope = ((this.endy - this.y)/(this.endx - this.x));
+    var magnitude = Math.sqrt(Math.pow((this.endx - this.initialX), 2) + Math.pow((this.endy - this.initialY), 2));
+    this.boundingbox.left = this.boundingbox.left + (this.endx - this.initialX) / magnitude * this.speed;
+    this.boundingbox.right = this.boundingbox.left + this.boundingbox.width;
+    this.boundingbox.top = this.boundingbox.top + (this.endy - this.initialY) / magnitude * this.speed;
+    this.boundingbox.bottom = this.boundingbox.top + this.boundingbox.height;
+    for (var i = 0; i < this.game.walls.length; i++) {
+           
+        var pf = this.game.walls[i];
+        if (this.boundingbox.collide(pf.boundingbox) && pf !== this) 	{
+
+            var type = pf.type;
+            switch(type){
+                case "enemy":
+                    pf.removedfromorld = true;
+                case "wall":
+                    this.boundingbox.top = this.y - this.radius;
+                    this.boundingbox.bottom = this.boundingbox.top + this.boundingbox.height;
+                    this.boundingbox.left = this.x - this.radius;
+                    this.boundingbox.right = this.boundingbox.left + this.boundingbox.width;
+                    //this.removeFromWorld = true;
+                    //this.boundingbox.removeFromorld = true;
+                    break;
+            }
+        } else {
+            this.x = this.boundingbox.left + this.radius;
+            this.y = this.boundingbox.top + this.radius;
+        }
+    } 
+    
+}
+Bullet.prototype.draw = function (ctx) {
+    ctx.fillStyle = "blue";
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.radius, 0, 2 * Math.PI, false);
+    ctx.fill();
+    
+    ctx.strokeStyle = "green";
+    ctx.strokeRect(this.boundingbox.left, this.boundingbox.top, this.boundingbox.width, this.boundingbox.height);
+}
+
+function Frank (game, wulf) {
+    this.backwardsAnimation = new Animation(ASSET_MANAGER.getAsset("./img/frankenzombie.png"), 0, 0, 32, 49, 0.2, 4, true, false);
+    this.leftAnimation = new Animation(ASSET_MANAGER.getAsset("./img/frankenzombie.png"), 0, 46, 32, 49, 0.2, 4, true, false);
+    this.rightAnimation = new Animation(ASSET_MANAGER.getAsset("./img/frankenzombie.png"), 0, 95, 32, 49, 0.2, 4, true, false);
+    this.forwardAnimation = new Animation(ASSET_MANAGER.getAsset("./img/frankenzombie.png"), 0, 142, 32, 49, 0.2, 4, true, false);
+    
+    
+    
+    this.x = 200;
+    this.y = 0;
+    this.wulf = wulf;
+    this.type = "enemy";
+    this.boundingbox = new BoundingBox(this.x, this.y, 25, 50);
+    
+    Entity.call(this, game, this.x, this.y);
+    
+    
+}
+
+Frank.prototype = new Entity();
+Frank.prototype.constructor = Frank;
+
+Frank.prototype.update = function() {
+    var speed = 100 * this.game.clockTick;
+    if(this.x < this.wulf.x) {
+        this.boundingbox.left = this.boundingbox.left + speed;
+        this.boundingbox.right = this.boundingbox.right + speed;
+        this.right = true;
+        this.left = false;
+    } else if (this.x > this.wulf.x) {
+        this.boundingbox.left = this.boundingbox.left - speed;
+        this.boundingbox.right = this.boundingbox.right - speed;
+        this.right = false;
+        this.left = true;
+    }
+    
+    if(this.y < this.wulf.y) {
+        this.boundingbox.top = this.boundingbox.top + speed;
+        this.boundingbox.bottom = this.boundingbox.bottom + speed;
+        this.forward = true; 
+        this.backwards = false;
+    } else if (this.y > this.wulf.y) {
+        
+        this.boundingbox.top = this.boundingbox.top - speed;
+        this.boundingbox.bottom = this.boundingbox.bottom - speed;
+        this.forward = false;
+        this.backwards = true;
+    }
+    
+    for (var i = 0; i < this.game.walls.length; i++) {
+           
+        var pf = this.game.walls[i];
+        if (this.boundingbox.collide(pf.boundingbox)) 	{
+
+            var type = pf.type;
+            switch(type){
+                case "player":
+                    
+                    
+                case "wall":
+                    console.log("hi");
+                    this.boundingbox.top = this.y;
+                    this.boundingbox.bottom = this.boundingbox.top + this.boundingbox.height;
+                    this.boundingbox.left = this.x;
+                    this.boundingbox.right = this.boundingbox.left + this.boundingbox.width;
+                    break;
+            }
+        } else {
+            console.log("ho");
+            this.y = this.boundingbox.top;
+            this.x = this.boundingbox.left;
+        }
+    } 
+}
+
+Frank.prototype.draw = function(ctx) {
+    
+    if (this.forward) {
+        this.forwardAnimation.drawFrame(this.game.clockTick, ctx, this.x, this.y);
+        this.lastAnimation = this.forwardAnimation;
+    } else if (this.backwards) {
+        this.backwardsAnimation.drawFrame(this.game.clockTick, ctx, this.x, this.y);
+        this.lastAnimation = this.backwardsAnimation;
+    } else if (this.right) {
+        this.rightAnimation.drawFrame(this.game.clockTick, ctx, this.x, this.y);
+        this.lastAnimation = this.rightAnimation;
+    } else if (this.left) {
+        this.leftAnimation.drawFrame(this.game.clockTick, ctx, this.x, this.y);
+        this.lastAnimation = this.leftAnimation;
+    } else {
+        this.forwardAnimation.drawFrame(this.game.clockTick, ctx, this.x, this.y);
+    }
+    
+    ctx.strokeStyle = "green";
+    ctx.strokeRect(this.boundingbox.left, this.boundingbox.top, this.boundingbox.width, this.boundingbox.height);
+    
+    
+}
+
+function Inventory(game){
+    this.items = [];
+}
+
+function Wall(game, x, y){
+    this.game = game;
+    this.x = x;
+    this.y = y;
+    this.removeFromWorld = false;
+    this.boundingbox = new BoundingBox(x, y, 40, 40); 
+    this.type = "wall";
+}
+
+Wall.prototype = new Entity();
+Wall.prototype.constructor = Wall;
+
+Wall.prototype.draw = function(ctx){
+    ctx.drawImage(ASSET_MANAGER.getAsset("./img/tileset_base.png"),128, 128, 
+    30, 30, this.x, this.y, 40, 40)
+        ctx.strokeStyle = "green";
+    ctx.strokeRect(this.boundingbox.left, this.boundingbox.top, this.
+            boundingbox.width, this.boundingbox.height);
+}
+
+function Goodie(game, x, y){
+    this.game = game;
+    this.x = x;
+    this.y = y;
+    this.removeFromWorld = false;
+    this.boundingbox = new BoundingBox(x, y, 40, 40); 
+    this.type = "goodie"
+}
+
+Goodie.prototype = new Entity();
+Goodie.prototype.constructor = Goodie;
+
+Goodie.prototype.draw = function(ctx){
+    ctx.drawImage(ASSET_MANAGER.getAsset("./img/tileset_base.png"),128, 0, 
+    30, 30, this.x, this.y, 40, 40)
+        ctx.strokeStyle = "green";
+    ctx.strokeRect(this.boundingbox.x, this.boundingbox.y, this.
+            boundingbox.width, this.boundingbox.height);
+}
+
+
+function Wulf (game) {
+    this.idleAnimation = new Animation (ASSET_MANAGER.getAsset("./img/Wulf.png"), 0, 0, 32, 49, 0.2, 1, false, false);
+    this.backwardsAnimation = new Animation(ASSET_MANAGER.getAsset("./img/Wulf.png"), 0, 0, 32, 49, 0.2, 4, true, false);
+    this.leftAnimation = new Animation(ASSET_MANAGER.getAsset("./img/Wulf.png"), 0, 46, 32, 49, 0.2, 4, true, false);
+    this.rightAnimation = new Animation(ASSET_MANAGER.getAsset("./img/Wulf.png"), 0, 95, 32, 49, 0.2, 4, true, false);
+    this.forwardAnimation = new Animation(ASSET_MANAGER.getAsset("./img/Wulf.png"), 0, 142, 32, 49, 0.2, 4, true, false);
+    this.lastAnimation = this.forwardAnimation;
+    this.moving = false;
+    this.centerX = 0;
+    this.centerY = 0;
+    this.boundingbox = new BoundingBox(this.centerX, this.centerY, 25, 50);
+    this.inventory = new Inventory(game);
+    this.type = "player";
+    Entity.call(this, game, 0, 0);
+    
+}
+Wulf.prototype = new Entity();
+Wulf.prototype.constructor = Wulf;
+
+//stack overflow suggestion on saving the key state.
+Wulf.prototype.update = function () {
+    var speed = 150  * this.game.clockTick;;
+	var bump = false;
+    if (keyState['W'.charCodeAt(0)]) {
+        this.forward = true;
+        this.moving = true;
+	   //check for top of frame
+	if(this.y > 0) {
+            this.boundingbox.top = this.boundingbox.top - speed;
+            this.boundingbox.bottom = this.boundingbox.bottom - speed;
+        }
+        
+           
+    } else {
+        this.forward = false;
+    }
+    
+    if (keyState['A'.charCodeAt(0)]) {
+        this.left = true;
+        this.moving = true;
+	if (this.x > 0)  {
+            this.boundingbox.left = this.boundingbox.left - speed;
+            this.boundingbox.right = this.boundingbox.right - speed;
+        }
+
+    } else {
+        this.left = false;
+    }
+    
+    if (keyState['D'.charCodeAt(0)]) {
+       this.right = true;
+       this.moving = true;
+       if (this.x < 775)  {
+           this.boundingbox.left = this.boundingbox.left + speed;
+           this.boundingbox.right = this.boundingbox.right + speed;
+       }
+
+    } else {
+        this.right = false;
+    }
+    
+    if (keyState['S'.charCodeAt(0)]) {
+        this.backwards = true;
+        this.moving = true;
+	if (this.y < 750) {
+            
+            this.boundingbox.top = this.boundingbox.top + speed;
+            this.boundingbox.bottom = this.boundingbox.bottom + speed;
+        }
+
+    } else {
+        this.backwards = false;
+    }
+    
+    if (keyState[' '.charCodeAt(0)]) {
+        var bullet = new Bullet(this.game, this);
+        this.game.addEntity(bullet);
+    } else {
+        
+    }
+    
+    if (this.backwards === false && this.forward === false && this.left === false && this.right === false) {
+        this.moving = false;
+    }
+//=======================================================	
+	//collision detection
+//=======================================================
+    
+	for (var i = 0; i < this.game.walls.length; i++) {
+           
+            var pf = this.game.walls[i];
+            if (this.boundingbox.collide(pf.boundingbox) ) 	{
+                
+                var type = pf.type;
+                switch(type){
+                    
+                case "player":
+                case "wall":
+                    this.boundingbox.top = this.y;
+                    this.boundingbox.bottom = this.boundingbox.top + this.boundingbox.height;
+                    this.boundingbox.left = this.x;
+                    this.boundingbox.right = this.boundingbox.left + this.boundingbox.width;
+                    break;
+
+                case "goodie":
+                    this.inventory.items.push("sack");
+                    pf.removeFromWorld = true;
+
+                    break;
+                        
+                        
+                }
+                
+               
+            } else {
+                this.y = this.boundingbox.top;
+                this.x = this.boundingbox.left;
+            }
+        }
+    
+	
+	   
+    //var duration = this.forwardAnimation.elapsedTime + this.game.clockTick;
+}
+
+Wulf.prototype.draw = function(ctx) {
+    
+    if (this.forward) {
+        this.forwardAnimation.drawFrame(this.game.clockTick, ctx, this.x, this.y);
+        this.lastAnimation = this.forwardAnimation;
+    } else if (this.backwards) {
+        this.backwardsAnimation.drawFrame(this.game.clockTick, ctx, this.x, this.y);
+        this.lastAnimation = this.backwardsAnimation;
+    } else if (this.right) {
+        this.rightAnimation.drawFrame(this.game.clockTick, ctx, this.x, this.y);
+        this.lastAnimation = this.rightAnimation;
+    } else if (this.left) {
+        this.leftAnimation.drawFrame(this.game.clockTick, ctx, this.x, this.y);
+        this.lastAnimation = this.leftAnimation;
+    } else {
+        this.lastAnimation.drawFrame(this.game.clockTick, ctx, this.x, this.y);
+    }
+    
+    ctx.strokeStyle = "green";
+    ctx.strokeRect(this.boundingbox.left, this.boundingbox.top, this.boundingbox.width, this.boundingbox.height);
+    
+    
+}
 // GameBoard code below
 // this could be the floor, or the background, or
 // an actual game board depending on the game.
 // it is what the game plays off of .  I.E the 'gameboard'
+
+function BoundingBox(x, y, width, height) { 
+    this.width = width;
+    this.height = height;
+
+    this.left = x;
+    this.top = y;
+    this.right = this.left + width;
+    this.bottom = this.top + height;
+}
+
+BoundingBox.prototype.collide = function (oth) {
+    if (this.right > oth.left && this.left < oth.right && this.top < oth.bottom && this.bottom > oth.top) return true;
+    return false;
+}
+
 function GameBoard() {
-    this.width = 780;
-    this.height = 580;
-    this.line = 10;
-    Entity.call(this, null, 0, 0, { radius: -10, width: this.width, height: this.height });
+
+    Entity.call(this, null, 0, 0);
 }
 
 // gameboard is an entity
@@ -387,112 +694,20 @@ GameBoard.prototype.update = function () {
 // draws the game board
 GameBoard.prototype.draw = function (ctx) {
 
-    ctx.strokeStyle = "#FF0808";
-    ctx.lineWidth = this.line;
-    ctx.strokeRect(this.line + 3, this.line + 3, this.width - 4, this.height - 4);
-
-}
-
-function Player(game, x, y, color) {
-    this.width = 780;
-    this.height = 580;
-    this.line = 5;
-    this.color = color;
-    Entity.call(this, game, x, y, { radius: 10, width: 10, height: 10 });
-}
-
-
-// gameboard is an entity
-Player.prototype = new Entity();
-Player.prototype.constructor = Player;
-
-// updates the game board
-Player.prototype.update = function () {
-    
-    this.x += this.game.keys.d; // + this.game.keys.d);
-    this.y += this.game.keys.s; // + this.game.keys.s);
-
-    // console.log(this.x + " " + this.y);
-
-    Entity.prototype.update.call(this);
-}
-
-// draws the game board
-Player.prototype.draw = function (ctx) {
-
-    ctx.beginPath();
-    ctx.strokeStyle = this.color;
-    ctx.lineWidth = 3;
-    ctx.arc(this.x, this.y, this.collide.radius, 0, Math.PI * 2, false);
-    ctx.stroke();
-    ctx.closePath();
-}
-
-function Npc(game, x, y, color) {
-    // selects a direction randomly up, down, left, right -> 0-3 respectively.
-    this.direction = Math.round(Math.random() * 100) % 4;
-    this.roaming = 0;
-    this.color = color;
-
-    this.changeDir = false;
-
-    this.x_delta = (Math.round(Math.random() * 100) % 2) - 1;
-    this.y_delta = (Math.round(Math.random() * 100) % 2) - 1;
-
-    // entity 
-    Entity.call(this, game, x, y, { radius: 10, width: 10, height: 10 });
-}
-
-// gameboard is an entity
-Npc.prototype = new Entity();
-Npc.prototype.constructor = Npc;
-
-// updates the game board
-Npc.prototype.update = function () {
-
-    this.x_delta = (Math.round(Math.random() * 100) % 2) - 1;
-    this.y_delta = -(Math.round(Math.random() * 100) % 2) - 1;
-
-    if (this.changeDir) {
-        this.x -= this.x_delta;
-        this.y -= this.y_delta;
-    } else {
-        this.x += this.x_delta;
-        this.y += this.y_delta;
-    }
-
-
-    /************  NOTE: make collisions return a integer so that better action can ************** 
-    *************        be taken then convert this to a switch and adjust only the **************
-    *************        values that simulate a bouce off                           **************/
-    if (this.game.collisions(this)) {
-        this.changeDir = !this.changeDir;
-        if (this.changeDir) {
-            this.x -= this.x_delta;
-            this.y -= this.y_delta;
-        } else {
-            this.x += this.x_delta;
-            this.y += this.y_delta;
-        }
-     }
-
-    Entity.prototype.update.call(this);
-}
-
-// draws the game board
-Npc.prototype.draw = function (ctx) {
-
-    ctx.beginPath();
-    ctx.strokeStyle = this.color;
-    ctx.lineWidth = 3;
-    ctx.arc(this.x, this.y, this.collide.radius, 0, Math.PI * 2, false);
-    ctx.stroke();
-    ctx.closePath();
+	for (var i = 0; i < 20; i++) {
+            for (var j = 0; j < 20; j++) {
+		ctx.drawImage(ASSET_MANAGER.getAsset("./img/tileset_base.png"),0, 0, 30, 30, i * 40, j * 40, 40, 40);
+            }
+	}
 }
 
 // the "main" code begins here
 
 var ASSET_MANAGER = new AssetManager();
+ASSET_MANAGER.queueDownload("./img/Wulf.png");
+ASSET_MANAGER.queueDownload("./img/tileset_base.png");
+ASSET_MANAGER.queueDownload("./img/frankenzombie.png");
+
 
 ASSET_MANAGER.downloadAll(function () {
     console.log("starting up da sheild");
@@ -501,13 +716,28 @@ ASSET_MANAGER.downloadAll(function () {
 
     var gameEngine = new GameEngine();
     var gameboard = new GameBoard();
-    
-    gameEngine.addEntity(gameboard);
-    gameEngine.addEntity(new Npc(gameEngine, 450, 400, "green"));
-    gameEngine.addEntity(new Npc(gameEngine, 470, 400, "white"));
-    gameEngine.addEntity(new Player(gameEngine, 40, 40, "red"));
 
+
+    var goodie = new Goodie(gameEngine, 300, 300);
+    var wulf = new Wulf(gameEngine);
+    var frank = new Frank(gameEngine, wulf);
+    var walls = [];
+    var wall = new Wall(gameEngine, 128, 128);
+    walls.push(wall);
+    walls.push(goodie);
+    walls.push(frank);
+    walls.push(wulf);
+    gameEngine.addEntity(gameboard);
+    gameEngine.addEntity(wulf);
+    gameEngine.addEntity(goodie);
+    gameEngine.addEntity(frank);
+    gameEngine.walls = walls;
+    
+    for (var i = 0; i < gameEngine.walls.length; i ++){
+        gameEngine.addEntity(walls[i]);
+        console.log(walls[i].type);
+    }
+ 
     gameEngine.init(ctx);
-    canvas.focus();
     gameEngine.start();
 });
