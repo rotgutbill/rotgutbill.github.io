@@ -215,6 +215,54 @@ GameEngine.prototype.startInput = function () {
     console.log('Input started');
 }
 
+GameEngine.prototype.generateMap = function (width, height) {
+
+    var that = this;
+    // this is currently a static map.  a random generator may be replaced here.
+    var addWall = function (x, y, endx, endy) {
+        var wall;
+        // start and end x are the same 
+        if (x === endx) {
+            // it is a vertical line
+            for (var i = y; i < endy; i++) {
+                wall = new Wall(that, x * 40, i * 40);
+                that.walls.push(wall);
+                that.addEntity(wall);
+            }
+            // if start and end y are the same
+        } else if (y === endy) {
+            // horizonal line.
+            for (var i = x; i < endx; i++) {
+                wall = new Wall(that, i * 40, y * 40);
+                that.walls.push(wall);
+                that.addEntity(wall);
+            }
+            // idk what to do right now.
+        } else {
+            console.log("invalid wall segment");
+        }
+    }
+
+    // add the walls
+    // stand alone walls
+    addWall(4, 0, 4, 8);
+    addWall(12, 0, 12, 5);
+    addWall(17, 9, 20, 9);
+
+    // L walls
+    addWall(0, 15, 4, 15);
+    addWall(4, 10, 4, 15);
+    addWall(10, 13, 10, 20);
+    addWall(8, 13, 10, 13);
+    addWall(14, 13, 13, 20);
+    addWall(14, 13, 20, 13);
+    addWall(12, 7, 12, 9);
+    addWall(12, 9, 15, 9);
+
+    // add some random stuff
+
+}
+
 // adds the entity to the Game Eng. (Asset mngr)
 GameEngine.prototype.addEntity = function (entity) {
     console.log('added entity');
@@ -499,7 +547,6 @@ Frank.prototype.draw = function(ctx) {
     ctx.strokeStyle = "green";
     ctx.strokeRect(this.boundingbox.left, this.boundingbox.top, this.boundingbox.width, this.boundingbox.height);
     
-    
 }
 
 function Inventory(game){
@@ -719,9 +766,9 @@ BoundingBox.prototype.collide = function (oth) {
     return false;
 }
 
-function GameBoard() {
+function GameBoard(game) {
 
-    Entity.call(this, null, 0, 0);
+    Entity.call(this, game, 0, 0);
 }
 
 // gameboard is an entity
@@ -757,15 +804,14 @@ ASSET_MANAGER.downloadAll(function () {
     var ctx = canvas.getContext('2d');
 
     var gameEngine = new GameEngine();
-    var gameboard = new GameBoard();
+    var gameboard = new GameBoard(gameEngine);
 
+    gameEngine.screenDims = { w: 800, h: 600 };
 
     var goodie = new Goodie(gameEngine, 300, 300);
     var wulf = new Wulf(gameEngine);
     var frank = new Frank(gameEngine, wulf);
     var walls = [];
-    var wall = new Wall(gameEngine, 128, 128);
-    walls.push(wall);
     walls.push(goodie);
     walls.push(frank);
     walls.push(wulf);
@@ -775,10 +821,7 @@ ASSET_MANAGER.downloadAll(function () {
     gameEngine.addEntity(frank);
     gameEngine.walls = walls;
     
-    for (var i = 0; i < gameEngine.walls.length; i ++){
-        gameEngine.addEntity(walls[i]);
-        console.log(walls[i].type);
-    }
+    gameEngine.generateMap(800, 800);
  
     gameEngine.init(ctx);
     gameEngine.start();
