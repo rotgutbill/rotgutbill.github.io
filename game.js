@@ -371,8 +371,10 @@ function Frank (game, wulf) {
     this.rightAnimation = new Animation(ASSET_MANAGER.getAsset("./img/frankenzombie.png"), 0, 95, 32, 49, 0.2, 4, true, false);
     this.forwardAnimation = new Animation(ASSET_MANAGER.getAsset("./img/frankenzombie.png"), 0, 142, 32, 49, 0.2, 4, true, false);
     
-    
-    
+    this.startTimer = 0;
+    this.currentTime = 0;
+    this.damage = 2;
+    this.mode = "follow";
     this.x = 200;
     this.y = 0;
     this.wulf = wulf;
@@ -388,6 +390,66 @@ Frank.prototype = new Entity();
 Frank.prototype.constructor = Frank;
 
 Frank.prototype.update = function() {
+    if (this.mode === "follow") {
+        this.follow();
+    } else {
+        this.attack();
+        
+    }
+    var collide = false;
+    for (var i = 0; i < this.game.walls.length; i++) {
+           
+        var pf = this.game.walls[i];
+        if (this.boundingbox.collide(pf.boundingbox)) 	{
+
+            var type = pf.type;
+            switch(type){
+                case "player":
+                    //console.log("hi");
+                    this.boundingbox.top = this.y;
+                    this.boundingbox.bottom = this.boundingbox.top + this.boundingbox.height;
+                    this.boundingbox.left = this.x;
+                    this.boundingbox.right = this.boundingbox.left + this.boundingbox.width;
+                    collide = true;
+                    this.mode = "attack";
+                    this.wulf.health = this.wulf.health - this.damage;
+                    this.startTimer = Date.now();
+                    
+                    break;
+                    
+                case "wall":
+                    //console.log("hi");
+                    this.boundingbox.top = this.y;
+                    this.boundingbox.bottom = this.boundingbox.top + this.boundingbox.height;
+                    this.boundingbox.left = this.x;
+                    this.boundingbox.right = this.boundingbox.left + this.boundingbox.width;
+                    collide = true;                    
+                    break;
+            }
+        } 
+    } 
+    if(!collide) {
+        //console.log("ho");
+        this.y = this.boundingbox.top;
+        this.x = this.boundingbox.left;
+        if(this.currentTime - this.startTimer > 1000) {
+            this.wulf.health = this.wulf.health - this.damage;
+            this.mode = "follow";
+            this.startTimer = 0;
+            this.currentTime = 0;
+            
+        }
+        
+    }
+        
+}
+
+Frank.prototype.attack = function() {
+    this.currentTime = Date.now();
+    
+}
+
+Frank.prototype.follow = function() {
     var speed = 100 * this.game.clockTick;
     if(this.x < this.wulf.x) {
         this.boundingbox.left = this.boundingbox.left + speed;
@@ -414,30 +476,6 @@ Frank.prototype.update = function() {
         this.backwards = true;
     }
     
-    for (var i = 0; i < this.game.walls.length; i++) {
-           
-        var pf = this.game.walls[i];
-        if (this.boundingbox.collide(pf.boundingbox)) 	{
-
-            var type = pf.type;
-            switch(type){
-                case "player":
-                    
-                    
-                case "wall":
-                    console.log("hi");
-                    this.boundingbox.top = this.y;
-                    this.boundingbox.bottom = this.boundingbox.top + this.boundingbox.height;
-                    this.boundingbox.left = this.x;
-                    this.boundingbox.right = this.boundingbox.left + this.boundingbox.width;
-                    break;
-            }
-        } else {
-            console.log("ho");
-            this.y = this.boundingbox.top;
-            this.x = this.boundingbox.left;
-        }
-    } 
 }
 
 Frank.prototype.draw = function(ctx) {
@@ -522,6 +560,7 @@ function Wulf (game) {
     this.boundingbox = new BoundingBox(this.centerX, this.centerY, 25, 50);
     this.inventory = new Inventory(game);
     this.type = "player";
+    this.health = 10;
     Entity.call(this, game, 0, 0);
     
 }
@@ -530,9 +569,12 @@ Wulf.prototype.constructor = Wulf;
 
 //stack overflow suggestion on saving the key state.
 Wulf.prototype.update = function () {
+    if (this.health === 0) {
+        this.removeFromWorld = true;
+    }
     var speed = 150  * this.game.clockTick;;
 	var bump = false;
-    if (keyState['W'.charCodeAt(0)]) {
+    if (keyState['E'.charCodeAt(0)]) {
         this.forward = true;
         this.moving = true;
 	   //check for top of frame
@@ -546,7 +588,7 @@ Wulf.prototype.update = function () {
         this.forward = false;
     }
     
-    if (keyState['A'.charCodeAt(0)]) {
+    if (keyState['S'.charCodeAt(0)]) {
         this.left = true;
         this.moving = true;
 	if (this.x > 0)  {
@@ -558,7 +600,7 @@ Wulf.prototype.update = function () {
         this.left = false;
     }
     
-    if (keyState['D'.charCodeAt(0)]) {
+    if (keyState['F'.charCodeAt(0)]) {
        this.right = true;
        this.moving = true;
        if (this.x < 775)  {
@@ -570,7 +612,7 @@ Wulf.prototype.update = function () {
         this.right = false;
     }
     
-    if (keyState['S'.charCodeAt(0)]) {
+    if (keyState['D'.charCodeAt(0)]) {
         this.backwards = true;
         this.moving = true;
 	if (this.y < 750) {
