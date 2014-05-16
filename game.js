@@ -363,6 +363,7 @@ function Bullet (game, entity) {
     this.speed = 5;
     this.radius = 3;
     this.boundingbox = new BoundingBox(this.x - this.radius, this.y - this.radius, 2 * this.radius, 2 * this.radius);
+    this.damage = 1;
     Entity.call(this, game, this.x, this.y);
     //this.speed = entity.gun.speed;
     
@@ -386,14 +387,14 @@ Bullet.prototype.update = function () {
             var type = pf.type;
             switch(type){
                 case "enemy":
-                    pf.removedfromorld = true;
+                    pf.health -= this.damage;
                 case "wall":
                     this.boundingbox.top = this.y - this.radius;
                     this.boundingbox.bottom = this.boundingbox.top + this.boundingbox.height;
                     this.boundingbox.left = this.x - this.radius;
                     this.boundingbox.right = this.boundingbox.left + this.boundingbox.width;
-                    //this.removeFromWorld = true;
-                    //this.boundingbox.removeFromorld = true;
+                    this.removeFromWorld = true;
+                    this.boundingbox.removeFromorld = true;
                     break;
             }
         } else {
@@ -413,6 +414,11 @@ Bullet.prototype.draw = function (ctx) {
     ctx.strokeRect(this.boundingbox.left, this.boundingbox.top, this.boundingbox.width, this.boundingbox.height);
 }
 
+
+/*================================================================================
+                                 Frank
+================================================================================*/
+
 function Frank (game, wulf) {
     this.backwardsAnimation = new Animation(ASSET_MANAGER.getAsset("./img/frankenzombie.png"), 0, 0, 32, 49, 0.2, 4, true, false);
     this.leftAnimation = new Animation(ASSET_MANAGER.getAsset("./img/frankenzombie.png"), 0, 46, 32, 49, 0.2, 4, true, false);
@@ -422,6 +428,7 @@ function Frank (game, wulf) {
     this.startTimer = 0;
     this.currentTime = 0;
     this.damage = 2;
+    this.health = 10;
     this.mode = "follow";
     this.x = 200;
     this.y = 0;
@@ -438,6 +445,10 @@ Frank.prototype = new Entity();
 Frank.prototype.constructor = Frank;
 
 Frank.prototype.update = function() {
+    if (this.health <= 0){ 
+        this.removeFromWorld = true;
+        this.boundingbox.removeFromWorld = true;
+    }
     if (this.mode === "follow") {
         this.follow();
     } else {
@@ -593,7 +604,9 @@ Goodie.prototype.draw = function(ctx){
             boundingbox.width, this.boundingbox.height);
 }
 
-
+/*==============================================================================
+ *   WULF
+ ==============================================================================*/
 function Wulf (game) {
     this.idleAnimation = new Animation (ASSET_MANAGER.getAsset("./img/Wulf.png"), 0, 0, 32, 49, 0.2, 1, false, false);
     this.backwardsAnimation = new Animation(ASSET_MANAGER.getAsset("./img/Wulf.png"), 0, 0, 32, 49, 0.2, 4, true, false);
@@ -685,21 +698,23 @@ Wulf.prototype.update = function () {
 //=======================================================	
 	//collision detection
 //=======================================================
-    
+        var collide = false;
 	for (var i = 0; i < this.game.walls.length; i++) {
            
             var pf = this.game.walls[i];
-            if (this.boundingbox.collide(pf.boundingbox) ) 	{
+            if (this.boundingbox.collide(pf.boundingbox)) 	{
                 
                 var type = pf.type;
                 switch(type){
                     
-                case "player":
+                case "frank":
                 case "wall":
+                    console.log( "wolf: " + this.boundingbox.top + " " + this.boundingbox.left + " wall: " + i);
                     this.boundingbox.top = this.y;
                     this.boundingbox.bottom = this.boundingbox.top + this.boundingbox.height;
                     this.boundingbox.left = this.x;
                     this.boundingbox.right = this.boundingbox.left + this.boundingbox.width;
+                    collide = true;  
                     break;
 
                 case "goodie":
@@ -709,15 +724,13 @@ Wulf.prototype.update = function () {
                     break;
                         
                         
-                }
-                
-               
-            } else {
+                } 
+            } 
+        }
+            if (!collide){
                 this.y = this.boundingbox.top;
                 this.x = this.boundingbox.left;
             }
-        }
-    
 	
 	   
     //var duration = this.forwardAnimation.elapsedTime + this.game.clockTick;
@@ -822,6 +835,7 @@ ASSET_MANAGER.downloadAll(function () {
     gameEngine.walls = walls;
     
     gameEngine.generateMap(800, 800);
+    //for (var i = 0; i < walls.length; i++){console.log(walls[i].x + " " + walls[i].y);}
  
     gameEngine.init(ctx);
     gameEngine.start();
