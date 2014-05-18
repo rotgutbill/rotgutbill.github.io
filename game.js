@@ -141,7 +141,7 @@ Timer.prototype.tick = function () {
  * displaying to screen.
  *
  */
-function GameEngine() {
+function GameEngine(HTMLscore) {
     this.entities = [];
     this.ctx = null;
     this.click = null;
@@ -149,7 +149,10 @@ function GameEngine() {
     this.wheel = null;
     this.surfaceWidth = null;
     this.surfaceHeight = null;
-    
+    this.score = 0;
+
+    this.HTMLscore = HTMLscore;
+    this.HTMLscore.innerHTML = "Score: " + this.score;
 }
 
 // initializes the canvas manager
@@ -299,6 +302,9 @@ GameEngine.prototype.update = function () {
             this.entities.splice(i, 1);
         }
     }
+
+    this.HTMLscore.innerHTML = "Score: " + this.score;
+
 }
 
 // calls updae and draw,
@@ -436,6 +442,8 @@ function Frank (game, wulf) {
     this.type = "enemy";
     this.boundingbox = new BoundingBox(this.x, this.y, 25, 50);
     
+    this.pointValue = 10;
+
     Entity.call(this, game, this.x, this.y);
     
     
@@ -448,6 +456,7 @@ Frank.prototype.update = function() {
     if (this.health <= 0){ 
         this.removeFromWorld = true;
         this.boundingbox.removeFromWorld = true;
+        this.game.score = this.game.score + this.pointValue;
     }
     if (this.mode === "follow") {
         this.follow();
@@ -814,9 +823,10 @@ ASSET_MANAGER.queueDownload("./img/frankenzombie.png");
 ASSET_MANAGER.downloadAll(function () {
     console.log("starting up da sheild");
     var canvas = document.getElementById('gameWorld');
+    var HTMLscore = document.getElementById('score');
     var ctx = canvas.getContext('2d');
 
-    var gameEngine = new GameEngine();
+    var gameEngine = new GameEngine(HTMLscore);
     var gameboard = new GameBoard(gameEngine);
 
     gameEngine.screenDims = { w: 800, h: 600 };
@@ -836,7 +846,7 @@ ASSET_MANAGER.downloadAll(function () {
     
     gameEngine.generateMap(800, 800);
     //for (var i = 0; i < walls.length; i++){console.log(walls[i].x + " " + walls[i].y);}
- 
+
     gameEngine.init(ctx);
     gameEngine.start();
 });
