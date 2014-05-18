@@ -296,6 +296,24 @@ GameEngine.prototype.update = function () {
             entity.update();
         }
     }
+    // updating screen coordinates
+    // user user x and y and the screenx and screeny
+    // to determine if the user has moved outside the motion box
+    // if they have moved outside the bounding box update the screenx and screeny
+    // else keep it the same.
+    // update x screen coordinate
+    if (this.user.x < this.screenDims.x + this.screenDims.motionbox.left) {
+        this.screenDims.x = Math.max(this.user.x - this.screenDims.motionbox.left, 0);
+    } else if (this.user.x > this.screenDims.x + this.screenDims.motionbox.right) {
+        this.screenDims.x = Math.min(this.user.x - this.screenDims.motionbox.right, this.mapDims.w - this.screenDims.w);
+    } 
+    
+    // update y screen coordinate
+    if (this.user.y < this.screenDims.y + this.screenDims.motionbox.top) {
+        this.screenDims.y = Math.max(this.user.y - this.screenDims.motionbox.top, 0);
+    } else if (this.user.y > this.screenDims.y + this.screenDims.motionbox.bottom) {
+        this.screenDims.y = Math.min(this.user.y - this.screenDims.motionbox.bottom, this.mapDims.h - this.screenDims.h);
+    }
 
     for (var i = this.entities.length - 1; i >= 0; --i) {
         if (this.entities[i].removeFromWorld) {
@@ -413,11 +431,11 @@ Bullet.prototype.update = function () {
 Bullet.prototype.draw = function (ctx) {
     ctx.fillStyle = "blue";
     ctx.beginPath();
-    ctx.arc(this.x, this.y, this.radius, 0, 2 * Math.PI, false);
+    ctx.arc(this.x - this.game.screenDims.x, this.y - this.game.screenDims.y, this.radius, 0, 2 * Math.PI, false);
     ctx.fill();
     
     ctx.strokeStyle = "green";
-    ctx.strokeRect(this.boundingbox.left, this.boundingbox.top, this.boundingbox.width, this.boundingbox.height);
+    ctx.strokeRect(this.x - this.game.screenDims.x, this.y - this.game.screenDims.y, this.boundingbox.width, this.boundingbox.height);
 }
 
 
@@ -549,23 +567,23 @@ Frank.prototype.follow = function() {
 Frank.prototype.draw = function(ctx) {
     
     if (this.forward) {
-        this.forwardAnimation.drawFrame(this.game.clockTick, ctx, this.x, this.y);
+        this.forwardAnimation.drawFrame(this.game.clockTick, ctx, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y);
         this.lastAnimation = this.forwardAnimation;
     } else if (this.backwards) {
-        this.backwardsAnimation.drawFrame(this.game.clockTick, ctx, this.x, this.y);
+        this.backwardsAnimation.drawFrame(this.game.clockTick, ctx, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y);
         this.lastAnimation = this.backwardsAnimation;
     } else if (this.right) {
-        this.rightAnimation.drawFrame(this.game.clockTick, ctx, this.x, this.y);
+        this.rightAnimation.drawFrame(this.game.clockTick, ctx, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y);
         this.lastAnimation = this.rightAnimation;
     } else if (this.left) {
-        this.leftAnimation.drawFrame(this.game.clockTick, ctx, this.x, this.y);
+        this.leftAnimation.drawFrame(this.game.clockTick, ctx, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y);
         this.lastAnimation = this.leftAnimation;
     } else {
-        this.forwardAnimation.drawFrame(this.game.clockTick, ctx, this.x, this.y);
+        this.forwardAnimation.drawFrame(this.game.clockTick, ctx, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y);
     }
     
-    ctx.strokeStyle = "green";
-    ctx.strokeRect(this.boundingbox.left, this.boundingbox.top, this.boundingbox.width, this.boundingbox.height);
+    ctx.strokeStyle = "green"; 
+    ctx.strokeRect(this.boundingbox.left - this.game.screenDims.x, this.boundingbox.top - this.game.screenDims.y, this.boundingbox.width, this.boundingbox.height);
     
 }
 
@@ -587,9 +605,9 @@ Wall.prototype.constructor = Wall;
 
 Wall.prototype.draw = function(ctx){
     ctx.drawImage(ASSET_MANAGER.getAsset("./img/tileset_base.png"),128, 128, 
-    30, 30, this.x, this.y, 40, 40)
+    30, 30, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y, 40, 40)
         ctx.strokeStyle = "green";
-    ctx.strokeRect(this.boundingbox.left, this.boundingbox.top, this.
+        ctx.strokeRect(this.boundingbox.left - this.game.screenDims.x, this.boundingbox.top - this.game.screenDims.y, this.
             boundingbox.width, this.boundingbox.height);
 }
 
@@ -606,10 +624,10 @@ Goodie.prototype = new Entity();
 Goodie.prototype.constructor = Goodie;
 
 Goodie.prototype.draw = function(ctx){
-    ctx.drawImage(ASSET_MANAGER.getAsset("./img/tileset_base.png"),128, 0, 
-    30, 30, this.x, this.y, 40, 40)
-        ctx.strokeStyle = "green";
-    ctx.strokeRect(this.boundingbox.x, this.boundingbox.y, this.
+    ctx.drawImage(ASSET_MANAGER.getAsset("./img/tileset_base.png"), 128, 0, 30, 30,
+                                         this.x - this.game.screenDims.x, this.y - this.game.screenDims.y, 40, 40);
+    ctx.strokeStyle = "green";
+    ctx.strokeRect(this.boundingbox.x - this.game.screenDims.x, this.boundingbox.y - this.game.screenDims.y, this.
             boundingbox.width, this.boundingbox.height);
 }
 
@@ -748,23 +766,23 @@ Wulf.prototype.update = function () {
 Wulf.prototype.draw = function(ctx) {
     
     if (this.forward) {
-        this.forwardAnimation.drawFrame(this.game.clockTick, ctx, this.x, this.y);
+        this.forwardAnimation.drawFrame(this.game.clockTick, ctx, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y);
         this.lastAnimation = this.forwardAnimation;
     } else if (this.backwards) {
-        this.backwardsAnimation.drawFrame(this.game.clockTick, ctx, this.x, this.y);
+        this.backwardsAnimation.drawFrame(this.game.clockTick, ctx, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y);
         this.lastAnimation = this.backwardsAnimation;
     } else if (this.right) {
-        this.rightAnimation.drawFrame(this.game.clockTick, ctx, this.x, this.y);
+        this.rightAnimation.drawFrame(this.game.clockTick, ctx, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y);
         this.lastAnimation = this.rightAnimation;
     } else if (this.left) {
-        this.leftAnimation.drawFrame(this.game.clockTick, ctx, this.x, this.y);
+        this.leftAnimation.drawFrame(this.game.clockTick, ctx, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y);
         this.lastAnimation = this.leftAnimation;
     } else {
-        this.lastAnimation.drawFrame(this.game.clockTick, ctx, this.x, this.y);
+        this.lastAnimation.drawFrame(this.game.clockTick, ctx, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y);
     }
     
     ctx.strokeStyle = "green";
-    ctx.strokeRect(this.boundingbox.left, this.boundingbox.top, this.boundingbox.width, this.boundingbox.height);
+    ctx.strokeRect(this.boundingbox.left - this.game.screenDims.x, this.boundingbox.top - this.game.screenDims.y, this.boundingbox.width, this.boundingbox.height);
     
     
 }
@@ -829,12 +847,14 @@ ASSET_MANAGER.downloadAll(function () {
     var gameEngine = new GameEngine(HTMLscore);
     var gameboard = new GameBoard(gameEngine);
 
-    gameEngine.screenDims = { w: 800, h: 600 };
+    gameEngine.screenDims = { w: 800, h: 600, x: 0, y: 0, motionbox: { left: 200, top: 200, right: 600, bottom: 400 } };
+    gameEngine.mapDims = {w: 800, h: 800};
 
     var goodie = new Goodie(gameEngine, 300, 300);
     var wulf = new Wulf(gameEngine);
     var frank = new Frank(gameEngine, wulf);
     var walls = [];
+
     walls.push(goodie);
     walls.push(frank);
     walls.push(wulf);
@@ -843,7 +863,9 @@ ASSET_MANAGER.downloadAll(function () {
     gameEngine.addEntity(goodie);
     gameEngine.addEntity(frank);
     gameEngine.walls = walls;
-    
+
+    gameEngine.user = wulf; // need a user for screen scrolling
+
     gameEngine.generateMap(800, 800);
     //for (var i = 0; i < walls.length; i++){console.log(walls[i].x + " " + walls[i].y);}
 
