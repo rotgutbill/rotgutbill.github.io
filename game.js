@@ -141,7 +141,7 @@ Timer.prototype.tick = function () {
  * displaying to screen.
  *
  */
-function GameEngine() {
+function GameEngine(HTMLscore) {
     this.entities = [];
     this.ctx = null;
     this.click = null;
@@ -149,7 +149,10 @@ function GameEngine() {
     this.wheel = null;
     this.surfaceWidth = null;
     this.surfaceHeight = null;
-    
+    this.score = 0;
+
+    this.HTMLscore = HTMLscore;
+    this.HTMLscore.innerHTML = "Score: " + this.score;
 }
 
 // initializes the canvas manager
@@ -215,6 +218,54 @@ GameEngine.prototype.startInput = function () {
     console.log('Input started');
 }
 
+GameEngine.prototype.generateMap = function (width, height) {
+
+    var that = this;
+    // this is currently a static map.  a random generator may be replaced here.
+    var addWall = function (x, y, endx, endy) {
+        var wall;
+        // start and end x are the same 
+        if (x === endx) {
+            // it is a vertical line
+            for (var i = y; i < endy; i++) {
+                wall = new Wall(that, x * 40, i * 40);
+                that.walls.push(wall);
+                that.addEntity(wall);
+            }
+            // if start and end y are the same
+        } else if (y === endy) {
+            // horizonal line.
+            for (var i = x; i < endx; i++) {
+                wall = new Wall(that, i * 40, y * 40);
+                that.walls.push(wall);
+                that.addEntity(wall);
+            }
+            // idk what to do right now.
+        } else {
+            console.log("invalid wall segment");
+        }
+    }
+
+    // add the walls
+    // stand alone walls
+    addWall(4, 0, 4, 8);
+    addWall(12, 0, 12, 5);
+    addWall(17, 9, 20, 9);
+
+    // L walls
+    addWall(0, 15, 4, 15);
+    addWall(4, 10, 4, 15);
+    addWall(10, 13, 10, 20);
+    addWall(8, 13, 10, 13);
+    addWall(14, 13, 13, 20);
+    addWall(14, 13, 20, 13);
+    addWall(12, 7, 12, 9);
+    addWall(12, 9, 15, 9);
+
+    // add some random stuff
+
+}
+
 // adds the entity to the Game Eng. (Asset mngr)
 GameEngine.prototype.addEntity = function (entity) {
     console.log('added entity');
@@ -245,12 +296,33 @@ GameEngine.prototype.update = function () {
             entity.update();
         }
     }
+    // updating screen coordinates
+    // user user x and y and the screenx and screeny
+    // to determine if the user has moved outside the motion box
+    // if they have moved outside the bounding box update the screenx and screeny
+    // else keep it the same.
+    // update x screen coordinate
+    if (this.user.x < this.screenDims.x + this.screenDims.motionbox.left) {
+        this.screenDims.x = Math.max(this.user.x - this.screenDims.motionbox.left, 0);
+    } else if (this.user.x > this.screenDims.x + this.screenDims.motionbox.right) {
+        this.screenDims.x = Math.min(this.user.x - this.screenDims.motionbox.right, this.mapDims.w - this.screenDims.w);
+    } 
+    
+    // update y screen coordinate
+    if (this.user.y < this.screenDims.y + this.screenDims.motionbox.top) {
+        this.screenDims.y = Math.max(this.user.y - this.screenDims.motionbox.top, 0);
+    } else if (this.user.y > this.screenDims.y + this.screenDims.motionbox.bottom) {
+        this.screenDims.y = Math.min(this.user.y - this.screenDims.motionbox.bottom, this.mapDims.h - this.screenDims.h);
+    }
 
     for (var i = this.entities.length - 1; i >= 0; --i) {
         if (this.entities[i].removeFromWorld) {
             this.entities.splice(i, 1);
         }
     }
+
+    this.HTMLscore.innerHTML = "Score: " + this.score;
+
 }
 
 // calls updae and draw,
@@ -312,7 +384,10 @@ function Bullet (game, entity) {
     this.initialY = this.y;
     this.endx = game.mouse.x;
     this.endy = game.mouse.y;
-    this.speed = 10;
+    this.speed = 5;
+    this.radius = 3;
+    this.boundingbox = new BoundingBox(this.x - this.radius, this.y - this.radius, 2 * this.radius, 2 * this.radius);
+    this.damage = 1;
     Entity.call(this, game, this.x, this.y);
     //this.speed = entity.gun.speed;
     
@@ -323,34 +398,145 @@ Wulf.prototype.constructor = Bullet;
 
 Bullet.prototype.update = function () {
     //var slope = ((this.endy - this.y)/(this.endx - this.x));
-    this.x = this.x + (this.endx - this.initialX) * (1/this.speed);
-    this.y = this.y + (this.endy - this.initialY) * (1/this.speed);
+    var magnitude = Math.sqrt(Math.pow((this.endx - this.initialX), 2) + Math.pow((this.endy - this.initialY), 2));
+    this.boundingbox.left = this.boundingbox.left + (this.endx - this.initialX) / magnitude * this.speed;
+    this.boundingbox.right = this.boundingbox.left + this.boundingbox.width;
+    this.boundingbox.top = this.boundingbox.top + (this.endy - this.initialY) / magnitude * this.speed;
+    this.boundingbox.bottom = this.boundingbox.top + this.boundingbox.height;
+    for (var i = 0; i < this.game.walls.length; i++) {
+           
+        var pf = this.game.walls[i];
+        if (this.boundingbox.collide(pf.boundingbox) && pf !== this) 	{
+
+            var type = pf.type;
+            switch(type){
+                case "enemy":
+                    pf.health -= this.damage;
+                case "wall":
+                    this.boundingbox.top = this.y - this.radius;
+                    this.boundingbox.bottom = this.boundingbox.top + this.boundingbox.height;
+                    this.boundingbox.left = this.x - this.radius;
+                    this.boundingbox.right = this.boundingbox.left + this.boundingbox.width;
+                    this.removeFromWorld = true;
+                    this.boundingbox.removeFromorld = true;
+                    break;
+            }
+        } else {
+            this.x = this.boundingbox.left + this.radius;
+            this.y = this.boundingbox.top + this.radius;
+        }
+    } 
+    
 }
 Bullet.prototype.draw = function (ctx) {
-    ctx.fillStyle = "white";
+    ctx.fillStyle = "blue";
     ctx.beginPath();
-    ctx.arc(this.x, this.y, 3, 0, 2 * Math.PI, false);
+    ctx.arc(this.x - this.game.screenDims.x, this.y - this.game.screenDims.y, this.radius, 0, 2 * Math.PI, false);
     ctx.fill();
+    
+    ctx.strokeStyle = "green";
+    ctx.strokeRect(this.x - this.game.screenDims.x, this.y - this.game.screenDims.y, this.boundingbox.width, this.boundingbox.height);
 }
+
+
+/*================================================================================
+                                 Frank
+================================================================================*/
 
 function Frank (game, wulf) {
     this.backwardsAnimation = new Animation(ASSET_MANAGER.getAsset("./img/frankenzombie.png"), 0, 0, 32, 49, 0.2, 4, true, false);
     this.leftAnimation = new Animation(ASSET_MANAGER.getAsset("./img/frankenzombie.png"), 0, 46, 32, 49, 0.2, 4, true, false);
     this.rightAnimation = new Animation(ASSET_MANAGER.getAsset("./img/frankenzombie.png"), 0, 95, 32, 49, 0.2, 4, true, false);
     this.forwardAnimation = new Animation(ASSET_MANAGER.getAsset("./img/frankenzombie.png"), 0, 142, 32, 49, 0.2, 4, true, false);
+    
+    this.startTimer = 0;
+    this.currentTime = 0;
+    this.damage = 2;
+    this.health = 10;
+    this.mode = "follow";
     this.x = 200;
     this.y = 0;
     this.wulf = wulf;
+    this.type = "enemy";
     this.boundingbox = new BoundingBox(this.x, this.y, 25, 50);
     
+    this.pointValue = 10;
+
     Entity.call(this, game, this.x, this.y);
+    
+    
 }
 
 Frank.prototype = new Entity();
 Frank.prototype.constructor = Frank;
 
 Frank.prototype.update = function() {
-    var speed = 3;
+    if (this.health <= 0){ 
+        this.removeFromWorld = true;
+        this.boundingbox.removeFromWorld = true;
+        this.game.score = this.game.score + this.pointValue;
+    }
+    if (this.mode === "follow") {
+        this.follow();
+    } else {
+        this.attack();
+        
+    }
+    var collide = false;
+    for (var i = 0; i < this.game.walls.length; i++) {
+           
+        var pf = this.game.walls[i];
+        if (this.boundingbox.collide(pf.boundingbox)) 	{
+
+            var type = pf.type;
+            switch(type){
+                case "player":
+                    //console.log("hi");
+                    this.boundingbox.top = this.y;
+                    this.boundingbox.bottom = this.boundingbox.top + this.boundingbox.height;
+                    this.boundingbox.left = this.x;
+                    this.boundingbox.right = this.boundingbox.left + this.boundingbox.width;
+                    collide = true;
+                    this.mode = "attack";
+                    this.wulf.health = this.wulf.health - this.damage;
+                    this.startTimer = Date.now();
+                    
+                    break;
+                    
+                case "wall":
+                    //console.log("hi");
+                    this.boundingbox.top = this.y;
+                    this.boundingbox.bottom = this.boundingbox.top + this.boundingbox.height;
+                    this.boundingbox.left = this.x;
+                    this.boundingbox.right = this.boundingbox.left + this.boundingbox.width;
+                    collide = true;                    
+                    break;
+            }
+        } 
+    } 
+    if(!collide) {
+        //console.log("ho");
+        this.y = this.boundingbox.top;
+        this.x = this.boundingbox.left;
+        if(this.currentTime - this.startTimer > 1000) {
+            this.wulf.health = this.wulf.health - this.damage;
+            this.mode = "follow";
+            this.startTimer = 0;
+            this.currentTime = 0;
+            
+        }
+        
+    }
+        
+}
+
+Frank.prototype.attack = function() {
+    this.currentTime = Date.now();
+    
+}
+
+Frank.prototype.follow = function() {
+    var speed = 100 * this.game.clockTick;
     if(this.x < this.wulf.x) {
         this.boundingbox.left = this.boundingbox.left + speed;
         this.boundingbox.right = this.boundingbox.right + speed;
@@ -376,50 +562,28 @@ Frank.prototype.update = function() {
         this.backwards = true;
     }
     
-    for (var i = 0; i < this.game.walls.length; i++) {
-           
-        var pf = this.game.walls[i];
-        if (this.boundingbox.collide(pf.boundingbox)) 	{
-
-            var type = pf.type;
-            switch(type){
-                case "player":
-                    this.wulf.removedfromorld = true;
-                case "wall":
-                    this.boundingbox.top = this.y;
-                    this.boundingbox.bottom = this.boundingbox.top + this.boundingbox.height;
-                    this.boundingbox.left = this.x;
-                    this.boundingbox.right = this.boundingbox.left + this.boundingbox.width;
-                    break;
-            }
-        } else {
-            this.y = this.boundingbox.top;
-            this.x = this.boundingbox.left;
-        }
-    } 
 }
 
 Frank.prototype.draw = function(ctx) {
     
     if (this.forward) {
-        this.forwardAnimation.drawFrame(this.game.clockTick, ctx, this.x, this.y);
+        this.forwardAnimation.drawFrame(this.game.clockTick, ctx, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y);
         this.lastAnimation = this.forwardAnimation;
     } else if (this.backwards) {
-        this.backwardsAnimation.drawFrame(this.game.clockTick, ctx, this.x, this.y);
+        this.backwardsAnimation.drawFrame(this.game.clockTick, ctx, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y);
         this.lastAnimation = this.backwardsAnimation;
     } else if (this.right) {
-        this.rightAnimation.drawFrame(this.game.clockTick, ctx, this.x, this.y);
+        this.rightAnimation.drawFrame(this.game.clockTick, ctx, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y);
         this.lastAnimation = this.rightAnimation;
     } else if (this.left) {
-        this.leftAnimation.drawFrame(this.game.clockTick, ctx, this.x, this.y);
+        this.leftAnimation.drawFrame(this.game.clockTick, ctx, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y);
         this.lastAnimation = this.leftAnimation;
     } else {
-        this.forwardAnimation.drawFrame(this.game.clockTick, ctx, this.x, this.y);
+        this.forwardAnimation.drawFrame(this.game.clockTick, ctx, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y);
     }
     
-    ctx.strokeStyle = "green";
-    ctx.strokeRect(this.boundingbox.left, this.boundingbox.top, this.boundingbox.width, this.boundingbox.height);
-    
+    ctx.strokeStyle = "green"; 
+    ctx.strokeRect(this.boundingbox.left - this.game.screenDims.x, this.boundingbox.top - this.game.screenDims.y, this.boundingbox.width, this.boundingbox.height);
     
 }
 
@@ -441,9 +605,9 @@ Wall.prototype.constructor = Wall;
 
 Wall.prototype.draw = function(ctx){
     ctx.drawImage(ASSET_MANAGER.getAsset("./img/tileset_base.png"),128, 128, 
-    30, 30, this.x, this.y, 40, 40)
+    30, 30, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y, 40, 40)
         ctx.strokeStyle = "green";
-    ctx.strokeRect(this.boundingbox.left, this.boundingbox.top, this.
+        ctx.strokeRect(this.boundingbox.left - this.game.screenDims.x, this.boundingbox.top - this.game.screenDims.y, this.
             boundingbox.width, this.boundingbox.height);
 }
 
@@ -460,14 +624,16 @@ Goodie.prototype = new Entity();
 Goodie.prototype.constructor = Goodie;
 
 Goodie.prototype.draw = function(ctx){
-    ctx.drawImage(ASSET_MANAGER.getAsset("./img/tileset_base.png"),128, 0, 
-    30, 30, this.x, this.y, 40, 40)
-        ctx.strokeStyle = "green";
-    ctx.strokeRect(this.boundingbox.x, this.boundingbox.y, this.
+    ctx.drawImage(ASSET_MANAGER.getAsset("./img/tileset_base.png"), 128, 0, 30, 30,
+                                         this.x - this.game.screenDims.x, this.y - this.game.screenDims.y, 40, 40);
+    ctx.strokeStyle = "green";
+    ctx.strokeRect(this.boundingbox.x - this.game.screenDims.x, this.boundingbox.y - this.game.screenDims.y, this.
             boundingbox.width, this.boundingbox.height);
 }
 
-
+/*==============================================================================
+ *   WULF
+ ==============================================================================*/
 function Wulf (game) {
     this.idleAnimation = new Animation (ASSET_MANAGER.getAsset("./img/Wulf.png"), 0, 0, 32, 49, 0.2, 1, false, false);
     this.backwardsAnimation = new Animation(ASSET_MANAGER.getAsset("./img/Wulf.png"), 0, 0, 32, 49, 0.2, 4, true, false);
@@ -481,6 +647,7 @@ function Wulf (game) {
     this.boundingbox = new BoundingBox(this.centerX, this.centerY, 25, 50);
     this.inventory = new Inventory(game);
     this.type = "player";
+    this.health = 10;
     Entity.call(this, game, 0, 0);
     
 }
@@ -489,9 +656,12 @@ Wulf.prototype.constructor = Wulf;
 
 //stack overflow suggestion on saving the key state.
 Wulf.prototype.update = function () {
-    var speed = 5;
+    if (this.health === 0) {
+        this.removeFromWorld = true;
+    }
+    var speed = 150  * this.game.clockTick;;
 	var bump = false;
-    if (keyState['W'.charCodeAt(0)]) {
+    if (keyState['E'.charCodeAt(0)]) {
         this.forward = true;
         this.moving = true;
 	   //check for top of frame
@@ -505,7 +675,7 @@ Wulf.prototype.update = function () {
         this.forward = false;
     }
     
-    if (keyState['A'.charCodeAt(0)]) {
+    if (keyState['S'.charCodeAt(0)]) {
         this.left = true;
         this.moving = true;
 	if (this.x > 0)  {
@@ -517,7 +687,7 @@ Wulf.prototype.update = function () {
         this.left = false;
     }
     
-    if (keyState['D'.charCodeAt(0)]) {
+    if (keyState['F'.charCodeAt(0)]) {
        this.right = true;
        this.moving = true;
        if (this.x < 775)  {
@@ -529,7 +699,7 @@ Wulf.prototype.update = function () {
         this.right = false;
     }
     
-    if (keyState['S'.charCodeAt(0)]) {
+    if (keyState['D'.charCodeAt(0)]) {
         this.backwards = true;
         this.moving = true;
 	if (this.y < 750) {
@@ -555,7 +725,7 @@ Wulf.prototype.update = function () {
 //=======================================================	
 	//collision detection
 //=======================================================
-    
+        var collide = false;
 	for (var i = 0; i < this.game.walls.length; i++) {
            
             var pf = this.game.walls[i];
@@ -564,12 +734,14 @@ Wulf.prototype.update = function () {
                 var type = pf.type;
                 switch(type){
                     
-                case "player":
+                case "frank":
                 case "wall":
+                    console.log( "wolf: " + this.boundingbox.top + " " + this.boundingbox.left + " wall: " + i);
                     this.boundingbox.top = this.y;
                     this.boundingbox.bottom = this.boundingbox.top + this.boundingbox.height;
                     this.boundingbox.left = this.x;
                     this.boundingbox.right = this.boundingbox.left + this.boundingbox.width;
+                    collide = true;  
                     break;
 
                 case "goodie":
@@ -579,15 +751,13 @@ Wulf.prototype.update = function () {
                     break;
                         
                         
-                }
-                
-               
-            } else {
+                } 
+            } 
+        }
+            if (!collide){
                 this.y = this.boundingbox.top;
                 this.x = this.boundingbox.left;
             }
-        }
-    
 	
 	   
     //var duration = this.forwardAnimation.elapsedTime + this.game.clockTick;
@@ -596,23 +766,23 @@ Wulf.prototype.update = function () {
 Wulf.prototype.draw = function(ctx) {
     
     if (this.forward) {
-        this.forwardAnimation.drawFrame(this.game.clockTick, ctx, this.x, this.y);
+        this.forwardAnimation.drawFrame(this.game.clockTick, ctx, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y);
         this.lastAnimation = this.forwardAnimation;
     } else if (this.backwards) {
-        this.backwardsAnimation.drawFrame(this.game.clockTick, ctx, this.x, this.y);
+        this.backwardsAnimation.drawFrame(this.game.clockTick, ctx, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y);
         this.lastAnimation = this.backwardsAnimation;
     } else if (this.right) {
-        this.rightAnimation.drawFrame(this.game.clockTick, ctx, this.x, this.y);
+        this.rightAnimation.drawFrame(this.game.clockTick, ctx, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y);
         this.lastAnimation = this.rightAnimation;
     } else if (this.left) {
-        this.leftAnimation.drawFrame(this.game.clockTick, ctx, this.x, this.y);
+        this.leftAnimation.drawFrame(this.game.clockTick, ctx, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y);
         this.lastAnimation = this.leftAnimation;
     } else {
-        this.lastAnimation.drawFrame(this.game.clockTick, ctx, this.x, this.y);
+        this.lastAnimation.drawFrame(this.game.clockTick, ctx, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y);
     }
     
     ctx.strokeStyle = "green";
-    ctx.strokeRect(this.boundingbox.left, this.boundingbox.top, this.boundingbox.width, this.boundingbox.height);
+    ctx.strokeRect(this.boundingbox.left - this.game.screenDims.x, this.boundingbox.top - this.game.screenDims.y, this.boundingbox.width, this.boundingbox.height);
     
     
 }
@@ -621,7 +791,7 @@ Wulf.prototype.draw = function(ctx) {
 // an actual game board depending on the game.
 // it is what the game plays off of .  I.E the 'gameboard'
 
-function BoundingBox(x, y, width, height) {
+function BoundingBox(x, y, width, height) { 
     this.width = width;
     this.height = height;
 
@@ -636,9 +806,9 @@ BoundingBox.prototype.collide = function (oth) {
     return false;
 }
 
-function GameBoard() {
+function GameBoard(game) {
 
-    Entity.call(this, null, 0, 0);
+    Entity.call(this, game, 0, 0);
 }
 
 // gameboard is an entity
@@ -671,21 +841,21 @@ ASSET_MANAGER.queueDownload("./img/frankenzombie.png");
 ASSET_MANAGER.downloadAll(function () {
     console.log("starting up da sheild");
     var canvas = document.getElementById('gameWorld');
+    var HTMLscore = document.getElementById('score');
     var ctx = canvas.getContext('2d');
 
-    var gameEngine = new GameEngine();
-    var gameboard = new GameBoard();
+    var gameEngine = new GameEngine(HTMLscore);
+    var gameboard = new GameBoard(gameEngine);
 
+    gameEngine.screenDims = { w: 800, h: 600, x: 0, y: 0, motionbox: { left: 200, top: 200, right: 600, bottom: 400 } };
+    gameEngine.mapDims = {w: 800, h: 800};
 
     var goodie = new Goodie(gameEngine, 300, 300);
-    var goodie2 = new Goodie(gameEngine, 400, 400);
     var wulf = new Wulf(gameEngine);
     var frank = new Frank(gameEngine, wulf);
     var walls = [];
-    var wall = new Wall(gameEngine, 128, 128);
-    walls.push(wall);
+
     walls.push(goodie);
-    walls.push(goodie2);
     walls.push(frank);
     walls.push(wulf);
     gameEngine.addEntity(gameboard);
@@ -693,11 +863,12 @@ ASSET_MANAGER.downloadAll(function () {
     gameEngine.addEntity(goodie);
     gameEngine.addEntity(frank);
     gameEngine.walls = walls;
-    
-    for (var i = 0; i < gameEngine.walls.length; i ++){
-        gameEngine.addEntity(walls[i]);
-    }
- 
+
+    gameEngine.user = wulf; // need a user for screen scrolling
+
+    gameEngine.generateMap(800, 800);
+    //for (var i = 0; i < walls.length; i++){console.log(walls[i].x + " " + walls[i].y);}
+
     gameEngine.init(ctx);
     gameEngine.start();
 });
