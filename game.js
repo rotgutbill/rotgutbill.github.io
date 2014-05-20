@@ -591,6 +591,24 @@ function Inventory(game){
     this.items = [];
 }
 
+function Furnishing(game, x, y) {
+    this.type = "wall";
+    this.boundingbox = new BoundingBox(x, y, 40, 40);
+
+    Entity.call(this, game, x, y); // assigns x y and the game for us.
+}
+
+Furnishing.prototype = new Entity();
+Furnishing.prototype.constructor = Furnishing;
+
+Furnishing.prototype.draw = function (ctx) {
+    ctx.drawImage(ASSET_MANAGER.getAsset("./img/floor.png"), 128, 128,
+    30, 30, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y, 40, 40)
+    ctx.strokeStyle = "green";
+    ctx.strokeRect(this.boundingbox.left - this.game.screenDims.x, this.boundingbox.top - this.game.screenDims.y, this.
+        boundingbox.width, this.boundingbox.height);
+}
+
 function Wall(game, x, y){
     this.game = game;
     this.x = x;
@@ -604,8 +622,8 @@ Wall.prototype = new Entity();
 Wall.prototype.constructor = Wall;
 
 Wall.prototype.draw = function(ctx){
-    ctx.drawImage(ASSET_MANAGER.getAsset("./img/tileset_base.png"),128, 128, 
-    30, 30, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y, 40, 40)
+    ctx.drawImage(ASSET_MANAGER.getAsset("./img/miscItems2.png"), 130, 415, // 600, 240,  // pit for walls  160, 480
+    30, 65, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y - 20, 40, 65)
         ctx.strokeStyle = "green";
         ctx.strokeRect(this.boundingbox.left - this.game.screenDims.x, this.boundingbox.top - this.game.screenDims.y, this.
             boundingbox.width, this.boundingbox.height);
@@ -642,13 +660,13 @@ function Wulf (game) {
     this.forwardAnimation = new Animation(ASSET_MANAGER.getAsset("./img/Wulf.png"), 0, 142, 32, 49, 0.2, 4, true, false);
     this.lastAnimation = this.forwardAnimation;
     this.moving = false;
-    this.centerX = 0;
-    this.centerY = 0;
+    this.centerX = 40;
+    this.centerY = 10;
     this.boundingbox = new BoundingBox(this.centerX, this.centerY, 25, 50);
     this.inventory = new Inventory(game);
     this.type = "player";
     this.health = 10;
-    Entity.call(this, game, 0, 0);
+    Entity.call(this, game, 40, 10);
     
 }
 Wulf.prototype = new Entity();
@@ -807,7 +825,6 @@ BoundingBox.prototype.collide = function (oth) {
 }
 
 function GameBoard(game) {
-
     Entity.call(this, game, 0, 0);
 }
 
@@ -823,11 +840,36 @@ GameBoard.prototype.update = function () {
 // draws the game board
 GameBoard.prototype.draw = function (ctx) {
 
-	for (var i = 0; i < 20; i++) {
-            for (var j = 0; j < 20; j++) {
-		ctx.drawImage(ASSET_MANAGER.getAsset("./img/tileset_base.png"),0, 0, 30, 30, i * 40, j * 40, 40, 40);
-            }
+	for (var i = 0; i < 3; i++) { for (var j = 0; j < 3; j++) {
+         ctx.drawImage(ASSET_MANAGER.getAsset("./img/floor.png"), 385, 565, 140, 140, i * 320 - this.game.screenDims.x, j * 320 - this.game.screenDims.y, 320, 320);
+        }
 	}
+
+    // blood spots
+	ctx.drawImage(ASSET_MANAGER.getAsset("./img/miscItems3.png"), 0, 80, 35, 70, 160 - this.game.screenDims.x, 320 - this.game.screenDims.y, 35, 80);
+	ctx.drawImage(ASSET_MANAGER.getAsset("./img/miscItems3.png"), 0, 80, 35, 70, 400 - this.game.screenDims.x, 440 - this.game.screenDims.y, 35, 80);
+	ctx.drawImage(ASSET_MANAGER.getAsset("./img/miscItems3.png"), 0, 80, 35, 70, 25 - this.game.screenDims.x, 520 - this.game.screenDims.y, 35, 80);
+	ctx.drawImage(ASSET_MANAGER.getAsset("./img/miscItems3.png"), 0, 80, 35, 70, 540 - this.game.screenDims.x, 280 - this.game.screenDims.y, 35, 80);
+	ctx.drawImage(ASSET_MANAGER.getAsset("./img/miscItems3.png"), 0, 80, 35, 70, 150 - this.game.screenDims.x, 720 - this.game.screenDims.y, 35, 80);
+	ctx.drawImage(ASSET_MANAGER.getAsset("./img/miscItems3.png"), 0, 80, 35, 70, 600 - this.game.screenDims.x, 720 - this.game.screenDims.y, 35, 80);
+
+	ctx.drawImage(ASSET_MANAGER.getAsset("./img/miscItems3.png"), 35, 80, 70, 70, 80 - this.game.screenDims.x, 200 - this.game.screenDims.y, 35, 80);
+	ctx.drawImage(ASSET_MANAGER.getAsset("./img/miscItems3.png"), 35, 80, 70, 70, 300 - this.game.screenDims.x, 20 - this.game.screenDims.y, 35, 80);
+	ctx.drawImage(ASSET_MANAGER.getAsset("./img/miscItems3.png"), 35, 80, 70, 70, 700 - this.game.screenDims.x, 85 - this.game.screenDims.y, 35, 80);
+	ctx.drawImage(ASSET_MANAGER.getAsset("./img/miscItems3.png"), 35, 80, 70, 70, 360 - this.game.screenDims.x, 560 - this.game.screenDims.y, 35, 80);
+	ctx.drawImage(ASSET_MANAGER.getAsset("./img/miscItems3.png"), 35, 80, 70, 70, 590 - this.game.screenDims.x, 650 - this.game.screenDims.y, 35, 80);
+
+    // pentagrams
+	ctx.drawImage(ASSET_MANAGER.getAsset("./img/miscItems2.png"), 320, 290, 95, 95, 5 - this.game.screenDims.x, 5 - this.game.screenDims.y, 95, 95);
+	ctx.drawImage(ASSET_MANAGER.getAsset("./img/miscItems2.png"), 415, 290, 95, 95, 650 - this.game.screenDims.x, 600 - this.game.screenDims.y, 95, 95);
+
+    // bones
+	ctx.drawImage(ASSET_MANAGER.getAsset("./img/miscItems2.png"), 0, 450, 65, 60, 100 - this.game.screenDims.x, 100 - this.game.screenDims.y, 65, 60);
+	ctx.drawImage(ASSET_MANAGER.getAsset("./img/miscItems2.png"), 0, 450, 65, 60, 350 - this.game.screenDims.x, 0 - this.game.screenDims.y, 65, 60);
+	ctx.drawImage(ASSET_MANAGER.getAsset("./img/miscItems2.png"), 0, 450, 65, 60, 520 - this.game.screenDims.x, 300 - this.game.screenDims.y, 65, 60);
+	ctx.drawImage(ASSET_MANAGER.getAsset("./img/miscItems2.png"), 0, 450, 65, 60, 80 - this.game.screenDims.x, 650 - this.game.screenDims.y, 65, 60);
+
+
 }
 
 // the "main" code begins here
@@ -836,7 +878,10 @@ var ASSET_MANAGER = new AssetManager();
 ASSET_MANAGER.queueDownload("./img/Wulf.png");
 ASSET_MANAGER.queueDownload("./img/tileset_base.png");
 ASSET_MANAGER.queueDownload("./img/frankenzombie.png");
-
+ASSET_MANAGER.queueDownload("./img/floor.png");
+ASSET_MANAGER.queueDownload("./img/floor_resize.png");
+ASSET_MANAGER.queueDownload("./img/miscItems3.png");
+ASSET_MANAGER.queueDownload("./img/miscItems2.png");
 
 ASSET_MANAGER.downloadAll(function () {
     console.log("starting up da sheild");
