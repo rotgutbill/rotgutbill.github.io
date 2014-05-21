@@ -150,6 +150,7 @@ function GameEngine(HTMLscore) {
     this.surfaceWidth = null;
     this.surfaceHeight = null;
     this.score = 0;
+    this.running = false;
 
     this.HTMLscore = HTMLscore;
     this.HTMLscore.innerHTML = "Score: " + this.score;
@@ -276,8 +277,13 @@ GameEngine.prototype.addEntity = function (entity) {
 GameEngine.prototype.draw = function (drawCallback) {
     this.ctx.clearRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
     this.ctx.save();
-    for (var i = 0; i < this.entities.length; i++) {
+    if (!this.running){
+        this.entities[0].draw(this.ctx);
+    }
+    else{
+        for (var i = 1; i < this.entities.length; i++) {
         this.entities[i].draw(this.ctx);
+    }
     }
     if (drawCallback) {
         drawCallback(this);
@@ -288,7 +294,6 @@ GameEngine.prototype.draw = function (drawCallback) {
 // forces updates of the entities.
 GameEngine.prototype.update = function () {
     var entitiesCount = this.entities.length;
-
     for (var i = 0; i < entitiesCount; i++) {
         var entity = this.entities[i];
 
@@ -462,9 +467,7 @@ function Frank (game, wulf) {
     
     this.pointValue = 10;
 
-    Entity.call(this, game, this.x, this.y);
-    
-    
+    Entity.call(this, game, this.x, this.y);   
 }
 
 Frank.prototype = new Entity();
@@ -565,7 +568,6 @@ Frank.prototype.follow = function() {
 }
 
 Frank.prototype.draw = function(ctx) {
-    
     if (this.forward) {
         this.forwardAnimation.drawFrame(this.game.clockTick, ctx, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y);
         this.lastAnimation = this.forwardAnimation;
@@ -676,6 +678,7 @@ Wulf.prototype.constructor = Wulf;
 Wulf.prototype.update = function () {
     if (this.health === 0) {
         this.removeFromWorld = true;
+        this.game.running = false;
     }
     var speed = 150  * this.game.clockTick;;
 	var bump = false;
@@ -782,7 +785,7 @@ Wulf.prototype.update = function () {
 }
 
 Wulf.prototype.draw = function(ctx) {
-    
+
     if (this.forward) {
         this.forwardAnimation.drawFrame(this.game.clockTick, ctx, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y);
         this.lastAnimation = this.forwardAnimation;
@@ -823,6 +826,38 @@ BoundingBox.prototype.collide = function (oth) {
     if (this.right > oth.left && this.left < oth.right && this.top < oth.bottom && this.bottom > oth.top) return true;
     return false;
 }
+
+//====================================================================================
+//PLAY GAME
+//====================================================================================
+function PlayGame(game, x, y) {
+    Entity.call(this, game, x, y);
+}
+
+PlayGame.prototype = new Entity();
+PlayGame.prototype.constructor = PlayGame;
+
+PlayGame.prototype.reset = function () {
+    this.game.running = false;
+}
+PlayGame.prototype.update = function () {
+    if (this.game.click && this.game.user.health > 0) this.game.running = true;
+}
+
+PlayGame.prototype.draw = function (ctx) {
+    if (!this.game.running) {
+        ctx.font = "24pt Impact";
+        ctx.fillStyle = "black";
+        if (this.game.mouse) { ctx.fillStyle = "red"; }
+        if (this.game.user.health > 0) {
+            ctx.fillText("Click to Play!", this.x, this.y);
+        }
+        else {
+            ctx.fillText("Wulf Blitzer has been devoured by Frankensteins.", this.x-240, this.y);
+        }
+    }
+}
+
 
 function GameBoard(game) {
     Entity.call(this, game, 0, 0);
@@ -891,6 +926,7 @@ ASSET_MANAGER.downloadAll(function () {
 
     var gameEngine = new GameEngine(HTMLscore);
     var gameboard = new GameBoard(gameEngine);
+    var pg = new PlayGame(gameEngine, 320, 350);
 
     gameEngine.screenDims = { w: 800, h: 600, x: 0, y: 0, motionbox: { left: 200, top: 200, right: 600, bottom: 400 } };
     gameEngine.mapDims = {w: 800, h: 800};
@@ -903,11 +939,13 @@ ASSET_MANAGER.downloadAll(function () {
     walls.push(goodie);
     walls.push(frank);
     walls.push(wulf);
+    gameEngine.addEntity(pg);
     gameEngine.addEntity(gameboard);
     gameEngine.addEntity(wulf);
     gameEngine.addEntity(goodie);
     gameEngine.addEntity(frank);
     gameEngine.walls = walls;
+    gameEngine.running = false;
 
     gameEngine.user = wulf; // need a user for screen scrolling
 
