@@ -448,7 +448,7 @@ Bullet.prototype.draw = function (ctx) {
                                  Frank
 ================================================================================*/
 
-function Frank (game, wulf) {
+function Frank (game, wulf, x, y) {
     this.backwardsAnimation = new Animation(ASSET_MANAGER.getAsset("./img/frankenzombie.png"), 0, 0, 32, 49, 0.2, 4, true, false);
     this.leftAnimation = new Animation(ASSET_MANAGER.getAsset("./img/frankenzombie.png"), 0, 46, 32, 49, 0.2, 4, true, false);
     this.rightAnimation = new Animation(ASSET_MANAGER.getAsset("./img/frankenzombie.png"), 0, 95, 32, 49, 0.2, 4, true, false);
@@ -459,8 +459,8 @@ function Frank (game, wulf) {
     this.damage = 2;
     this.health = 10;
     this.mode = "follow";
-    this.x = 200;
-    this.y = 0;
+    this.x = x;
+    this.y = y;
     this.wulf = wulf;
     this.type = "enemy";
     this.boundingbox = new BoundingBox(this.x, this.y, 25, 50);
@@ -478,6 +478,9 @@ Frank.prototype.update = function() {
         this.removeFromWorld = true;
         this.boundingbox.removeFromWorld = true;
         this.game.score = this.game.score + this.pointValue;
+        if (this.game.score > 40){
+            this.game.running = false;
+        }
     }
     if (this.mode === "follow") {
         this.follow();
@@ -849,7 +852,10 @@ PlayGame.prototype.draw = function (ctx) {
         ctx.font = "24pt Impact";
         ctx.fillStyle = "black";
         if (this.game.mouse) { ctx.fillStyle = "red"; }
-        if (this.game.user.health > 0) {
+        if (this.game.score > 40){
+            ctx.fillText("A winner is Wulf!", this.x, this.y);
+        }
+        else if (this.game.user.health > 0) {
             ctx.fillText("Click to Play!", this.x, this.y);
         }
         else {
@@ -933,17 +939,32 @@ ASSET_MANAGER.downloadAll(function () {
 
     var goodie = new Goodie(gameEngine, 300, 300);
     var wulf = new Wulf(gameEngine);
-    var frank = new Frank(gameEngine, wulf);
-    var walls = [];
+    var frank1 = new Frank(gameEngine, wulf, 200, 200);
+    var frank2 = new Frank(gameEngine, wulf, 200, 300);
+    var frank3 = new Frank(gameEngine, wulf, 575, 250);
+    var frank4 = new Frank(gameEngine, wulf, 50, 750);
+    var frank5 = new Frank(gameEngine, wulf, 725, 725);
+   var walls = [];
 
     walls.push(goodie);
-    walls.push(frank);
+    walls.push(frank1);
+    walls.push(frank2);
+    walls.push(frank3);        
+    walls.push(frank4);
+    walls.push(frank5);
+
     walls.push(wulf);
     gameEngine.addEntity(pg);
     gameEngine.addEntity(gameboard);
     gameEngine.addEntity(wulf);
     gameEngine.addEntity(goodie);
-    gameEngine.addEntity(frank);
+    gameEngine.addEntity(frank1);
+    gameEngine.addEntity(frank2);
+    gameEngine.addEntity(frank3);
+    gameEngine.addEntity(frank4);
+    gameEngine.addEntity(frank5);
+
+
     gameEngine.walls = walls;
     gameEngine.running = false;
 
