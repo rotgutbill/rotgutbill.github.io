@@ -30,7 +30,7 @@ AssetManager.prototype.queueDownload = function (path) {
 
 // returns truethy if the download is finished.
 AssetManager.prototype.isDone = function () {
-    return (this.downloadQueue.length == this.successCount + this.errorCount);
+    return (this.downloadQueue.length === this.successCount + this.errorCount);
 }
 
 // downloads all assets.
@@ -323,6 +323,11 @@ GameEngine.prototype.update = function () {
     for (var i = this.entities.length - 1; i >= 0; --i) {
         if (this.entities[i].removeFromWorld) {
             this.entities.splice(i, 1);
+            for(var j = 0; j < this.walls.length; j++){
+                if(this.walls[j].removeFromWorld){
+                    this.walls.splice(j,1);
+                }
+            }
         }
     }
 
@@ -593,7 +598,29 @@ Frank.prototype.draw = function(ctx) {
 }
 
 function Inventory(game){
-    this.items = [];
+    this.items = ['0','0','0','0','0','0','0','0','0','0'];
+    for(i=0; i < this.items.length; i++){
+        this.items [i] = 0;
+    }
+}
+
+Inventory.prototype = new Entity();
+Inventory.prototype.constructor = Inventory;
+
+Inventory.prototype.draw = function (ctx) {
+    ctx.strokeStyle = "yellow";
+    for (i = 0; i < 8; i ++){       
+        ctx.strokeRect(i * 40, 15, 40, 40);
+        if (this.items[i] !== 0){
+            console.log(this.items[i]);
+            ctx.drawImage(ASSET_MANAGER.getAsset("./img/tileset_base.png"), 128, 0, 30, 30,
+            i * 40, 15, 40, 40);
+        }
+    }
+}
+
+Inventory.prototype.update = function (ctx) {
+    
 }
 
 function Furnishing(game, x, y) {
@@ -668,9 +695,10 @@ function Wulf (game) {
     this.centerX = 40;
     this.centerY = 10;
     this.boundingbox = new BoundingBox(this.centerX, this.centerY, 25, 50);
-    this.inventory = new Inventory(game);
     this.type = "player";
     this.health = 10;
+    this.inventory = new Inventory(game);
+    
     Entity.call(this, game, 40, 10);
     
 }
@@ -768,13 +796,14 @@ Wulf.prototype.update = function () {
                     collide = true;  
                     break;
 
-                case "goodie":
-                    this.inventory.items.push("sack");
+                case "goodie":    
+                    var i = 0;
+                    while(this.inventory.items[i] != "0"){
+                        i++;
+                        }
+                    this.inventory.items[i] = "sack";
                     pf.removeFromWorld = true;
-
                     break;
-                        
-                        
                 } 
             } 
         }
@@ -810,15 +839,11 @@ Wulf.prototype.draw = function(ctx) {
     
     
 }
-// GameBoard code below
-// this could be the floor, or the background, or
-// an actual game board depending on the game.
-// it is what the game plays off of .  I.E the 'gameboard'
 
 function BoundingBox(x, y, width, height) { 
     this.width = width;
     this.height = height;
-
+    this.removeFromWorld = false;
     this.left = x;
     this.top = y;
     this.right = this.left + width;
@@ -944,7 +969,9 @@ ASSET_MANAGER.downloadAll(function () {
     var frank3 = new Frank(gameEngine, wulf, 575, 250);
     var frank4 = new Frank(gameEngine, wulf, 50, 750);
     var frank5 = new Frank(gameEngine, wulf, 725, 725);
-   var walls = [];
+    var inv = new Inventory(gameEngine);
+    wulf.inventory = inv;
+    var walls = [];
 
     walls.push(goodie);
     walls.push(frank1);
@@ -964,7 +991,6 @@ ASSET_MANAGER.downloadAll(function () {
     gameEngine.addEntity(frank4);
     gameEngine.addEntity(frank5);
 
-
     gameEngine.walls = walls;
     gameEngine.running = false;
 
@@ -972,7 +998,7 @@ ASSET_MANAGER.downloadAll(function () {
 
     gameEngine.generateMap(800, 800);
     //for (var i = 0; i < walls.length; i++){console.log(walls[i].x + " " + walls[i].y);}
-
+    gameEngine.addEntity(inv);
     gameEngine.init(ctx);
     gameEngine.start();
 });
