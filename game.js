@@ -101,7 +101,7 @@ Animation.prototype.drawFrame = function (tick, ctx, x, y, scaleBy) {
     var locX = x;
     var locY = y;
     ctx.drawImage(this.spriteSheet,
-                  index * this.frameWidth, vindex*this.frameHeight + this.startY,  // source from sheet
+                  index * this.frameWidth+ this.startX, vindex*this.frameHeight + this.startY,  // source from sheet
                   this.frameWidth, this.frameHeight,
                   locX, locY,
                   this.frameWidth * scaleBy,
@@ -247,24 +247,29 @@ GameEngine.prototype.generateMap = function (width, height) {
         }
     }
 
-    // add the walls
-    // stand alone walls
-    addWall(4, 0, 4, 8);
-    addWall(12, 0, 12, 5);
-    addWall(17, 9, 20, 9);
+	for (var i = 0; i < 40; i+=20) {
+		for (var j = 0; j < 40; j+=20) {
+		
+			// add the walls
+			// stand alone walls
+			addWall(4 + i, 0 + j, 4 + i, 8 + j);
+			addWall(12 + i, 0 + j, 12 + i, 5 + j);
+			addWall(17 + i, 9 + j, 20 + i, 9 + j);
 
     // L walls
-    addWall(0, 15, 4, 15);
-    addWall(4, 10, 4, 15);
-    addWall(10, 13, 10, 20);
-    addWall(8, 13, 10, 13);
-    addWall(14, 13, 13, 20);
-    addWall(14, 13, 20, 13);
-    addWall(12, 7, 12, 9);
-    addWall(12, 9, 15, 9);
+			addWall(0 + i, 15 + j, 4 + i, 15 + j);
+			addWall(4 + i, 10 + j, 4 + i, 16 + j);
+			addWall(10 + i, 13 + j, 10 + i, 20 + j);
+			addWall(8 + i, 13 + j, 10 + i, 13 + j);
+			addWall(13 + i, 13 + j, 13 + i, 20 + j);
+			addWall(16 + i, 13 + j, 20 + i, 13 + j);
+			addWall(12 + i, 7 + j, 12 + i, 9 + j);
+			addWall(12 + i, 9 + j, 15 + i, 9 + j);
 
-    // add some random stuff
+			// add some random stuff
 
+		}
+	}
 }
 
 // adds the entity to the Game Eng. (Asset mngr)
@@ -654,6 +659,75 @@ Goodie.prototype.draw = function(ctx){
             boundingbox.width, this.boundingbox.height);
 }
 
+
+function ElectricFrank( game , x, y) {
+	// set the animations 
+	// regular walking animations
+    this.leftAnime = new Animation(ASSET_MANAGER.getAsset("./img/Frankenstein.png"), 33, 15, 41, 49, 0.2, 4, true, false);
+    this.rightAnime = new Animation(ASSET_MANAGER.getAsset("./img/Frankenstein.png"), 197, 15, 41, 50, 0.2, 4, true, false);
+    this.downAnime = new Animation(ASSET_MANAGER.getAsset("./img/Frankenstein.png"), 33, 70, 41, 52, 0.2, 4, true, false);
+	this.upAnime = new Animation(ASSET_MANAGER.getAsset("./img/Frankenstein.png"), 197, 70, 41, 52, 0.2, 4, true, false);
+    // got hit animations.
+	this.upAnimeS = new Animation(ASSET_MANAGER.getAsset("./img/Frankenstein.png"), 30, 210, 56, 55, 0.2, 6, true, false);
+    this.downAnimeS = new Animation(ASSET_MANAGER.getAsset("./img/Frankenstein.png"), 30, 280, 56, 55, 0.2, 6, true, false);
+    this.leftAnimeS = new Animation(ASSET_MANAGER.getAsset("./img/Frankenstein.png"), 9, 350, 48, 60, 0.2, 4, true, false);
+    this.rightAnimeS = new Animation(ASSET_MANAGER.getAsset("./img/Frankenstein.png"), 193, 350, 48, 60, 0.2, 4, true, false);
+    // trailing lightening
+	this.lighteningAnime = new Animation(ASSET_MANAGER.getAsset("./img/Frankenstein.png"), 140, 415, 20, 20, 0.3, 6, true, false);
+	this.death = new Animation(ASSET_MANAGER.getAsset("./img/Frankenstein.png"), 88, 127, 56, 65, 0.2, 4, true, false);
+	
+	this.direction = {x: 0, y: 1}; // point towards the screen
+	this.speed = 1;
+	this.targetAnime = "down";
+	
+    Entity.call(this, game, x, y);
+}
+
+ElectricFrank.prototype = new Entity();
+ElectricFrank.prototype.constructor = ElectricFrank;
+
+// updates electric frank
+ElectricFrank.prototype.update = function () {
+
+		
+
+}
+
+ElectricFrank.prototype.draw = function (ctx) {
+
+	//this.leftAnimeS.drawFrame(this.game.clockTick, ctx, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y);
+	switch(this.targetAnime) {
+	case "up":
+	    this.upAnime.drawFrame(this.game.clockTick, ctx, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y);
+
+	   	break;
+	case "down":
+		this.downAnime.drawFrame(this.game.clockTick, ctx, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y);
+        break;
+	case "right":
+	    this.rightAnime.drawFrame(this.game.clockTick, ctx, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y);
+        break;
+	case "left":
+	    this.leftAnime.drawFrame(this.game.clockTick, ctx, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y);
+        break;
+	case "hitup":
+	    this.upAnimeS.drawFrame(this.game.clockTick, ctx, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y);
+        break;
+	case "hitdown":
+		this.downAnimeS.drawFrame(this.game.clockTick, ctx, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y);
+        break;
+	case "hitright":
+	    this.rightAnimeS.drawFrame(this.game.clockTick, ctx, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y);
+        break;
+	case "hitleft":
+	    this.leftAnimeS.drawFrame(this.game.clockTick, ctx, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y);
+        break;
+	case "death":
+	    this.death.drawFrame(this.game.clockTick, ctx, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y);
+        break;
+	} 
+}
+
 /*==============================================================================
  *   WULF
  ==============================================================================*/
@@ -674,6 +748,7 @@ function Wulf (game) {
     Entity.call(this, game, 40, 10);
     
 }
+
 Wulf.prototype = new Entity();
 Wulf.prototype.constructor = Wulf;
 
@@ -714,7 +789,7 @@ Wulf.prototype.update = function () {
     if (keyState['F'.charCodeAt(0)]) {
        this.right = true;
        this.moving = true;
-       if (this.x < 775)  {
+       if (this.x < 1575)  {
            this.boundingbox.left = this.boundingbox.left + speed;
            this.boundingbox.right = this.boundingbox.right + speed;
        }
@@ -726,7 +801,7 @@ Wulf.prototype.update = function () {
     if (keyState['D'.charCodeAt(0)]) {
         this.backwards = true;
         this.moving = true;
-	if (this.y < 750) {
+	if (this.y < 1550) {
             
             this.boundingbox.top = this.boundingbox.top + speed;
             this.boundingbox.bottom = this.boundingbox.bottom + speed;
@@ -760,7 +835,7 @@ Wulf.prototype.update = function () {
                     
                 case "frank":
                 case "wall":
-                    console.log( "wolf: " + this.boundingbox.top + " " + this.boundingbox.left + " wall: " + i);
+                    // console.log( "wolf: " + this.boundingbox.top + " " + this.boundingbox.left + " wall: " + i);
                     this.boundingbox.top = this.y;
                     this.boundingbox.bottom = this.boundingbox.top + this.boundingbox.height;
                     this.boundingbox.left = this.x;
@@ -881,36 +956,36 @@ GameBoard.prototype.update = function () {
 // draws the game board
 GameBoard.prototype.draw = function (ctx) {
 
-	for (var i = 0; i < 3; i++) { for (var j = 0; j < 3; j++) {
+	for (var i = 0; i < 6; i++) { for (var j = 0; j < 6; j++) {
          ctx.drawImage(ASSET_MANAGER.getAsset("./img/floor.png"), 385, 565, 140, 140, i * 320 - this.game.screenDims.x, j * 320 - this.game.screenDims.y, 320, 320);
         }
 	}
-
+    
+	for (var i = 0; i < 1600; i+=800) { for (var j = 0; j < 1600; j+=800) {
     // blood spots
-	ctx.drawImage(ASSET_MANAGER.getAsset("./img/miscItems3.png"), 0, 80, 35, 70, 160 - this.game.screenDims.x, 320 - this.game.screenDims.y, 35, 80);
-	ctx.drawImage(ASSET_MANAGER.getAsset("./img/miscItems3.png"), 0, 80, 35, 70, 400 - this.game.screenDims.x, 440 - this.game.screenDims.y, 35, 80);
-	ctx.drawImage(ASSET_MANAGER.getAsset("./img/miscItems3.png"), 0, 80, 35, 70, 25 - this.game.screenDims.x, 520 - this.game.screenDims.y, 35, 80);
-	ctx.drawImage(ASSET_MANAGER.getAsset("./img/miscItems3.png"), 0, 80, 35, 70, 540 - this.game.screenDims.x, 280 - this.game.screenDims.y, 35, 80);
-	ctx.drawImage(ASSET_MANAGER.getAsset("./img/miscItems3.png"), 0, 80, 35, 70, 150 - this.game.screenDims.x, 720 - this.game.screenDims.y, 35, 80);
-	ctx.drawImage(ASSET_MANAGER.getAsset("./img/miscItems3.png"), 0, 80, 35, 70, 600 - this.game.screenDims.x, 720 - this.game.screenDims.y, 35, 80);
+		ctx.drawImage(ASSET_MANAGER.getAsset("./img/miscItems3.png"), 0, 80, 35, 70, (160 + i) - this.game.screenDims.x, (320 + j) - this.game.screenDims.y, 35, 80);
+		ctx.drawImage(ASSET_MANAGER.getAsset("./img/miscItems3.png"), 0, 80, 35, 70, (400 + i)  - this.game.screenDims.x, (440 + j) - this.game.screenDims.y, 35, 80);
+		ctx.drawImage(ASSET_MANAGER.getAsset("./img/miscItems3.png"), 0, 80, 35, 70, (25 + i)  - this.game.screenDims.x, (520 + j) - this.game.screenDims.y, 35, 80);
+		ctx.drawImage(ASSET_MANAGER.getAsset("./img/miscItems3.png"), 0, 80, 35, 70, (540 + i)  - this.game.screenDims.x, (280 + j) - this.game.screenDims.y, 35, 80);
+		ctx.drawImage(ASSET_MANAGER.getAsset("./img/miscItems3.png"), 0, 80, 35, 70, (150 + i)  - this.game.screenDims.x, (720 + j) - this.game.screenDims.y, 35, 80);
+		ctx.drawImage(ASSET_MANAGER.getAsset("./img/miscItems3.png"), 0, 80, 35, 70, (600 + i)  - this.game.screenDims.x, (720 + j) - this.game.screenDims.y, 35, 80);
 
-	ctx.drawImage(ASSET_MANAGER.getAsset("./img/miscItems3.png"), 35, 80, 70, 70, 80 - this.game.screenDims.x, 200 - this.game.screenDims.y, 35, 80);
-	ctx.drawImage(ASSET_MANAGER.getAsset("./img/miscItems3.png"), 35, 80, 70, 70, 300 - this.game.screenDims.x, 20 - this.game.screenDims.y, 35, 80);
-	ctx.drawImage(ASSET_MANAGER.getAsset("./img/miscItems3.png"), 35, 80, 70, 70, 700 - this.game.screenDims.x, 85 - this.game.screenDims.y, 35, 80);
-	ctx.drawImage(ASSET_MANAGER.getAsset("./img/miscItems3.png"), 35, 80, 70, 70, 360 - this.game.screenDims.x, 560 - this.game.screenDims.y, 35, 80);
-	ctx.drawImage(ASSET_MANAGER.getAsset("./img/miscItems3.png"), 35, 80, 70, 70, 590 - this.game.screenDims.x, 650 - this.game.screenDims.y, 35, 80);
+		ctx.drawImage(ASSET_MANAGER.getAsset("./img/miscItems3.png"), 35, 80, 70, 70, (80 + i)  - this.game.screenDims.x, (200 + j) - this.game.screenDims.y, 35, 80);
+		ctx.drawImage(ASSET_MANAGER.getAsset("./img/miscItems3.png"), 35, 80, 70, 70, (300 + i)  - this.game.screenDims.x, (20 + j) - this.game.screenDims.y, 35, 80);
+		ctx.drawImage(ASSET_MANAGER.getAsset("./img/miscItems3.png"), 35, 80, 70, 70, (700 + i)  - this.game.screenDims.x, (85 + j) - this.game.screenDims.y, 35, 80);
+		ctx.drawImage(ASSET_MANAGER.getAsset("./img/miscItems3.png"), 35, 80, 70, 70, (360 + i)  - this.game.screenDims.x, (560 + j) - this.game.screenDims.y, 35, 80);
+		ctx.drawImage(ASSET_MANAGER.getAsset("./img/miscItems3.png"), 35, 80, 70, 70, (590 + i)  - this.game.screenDims.x, (650 + j) - this.game.screenDims.y, 35, 80);
 
-    // pentagrams
-	ctx.drawImage(ASSET_MANAGER.getAsset("./img/miscItems2.png"), 320, 290, 95, 95, 5 - this.game.screenDims.x, 5 - this.game.screenDims.y, 95, 95);
-	ctx.drawImage(ASSET_MANAGER.getAsset("./img/miscItems2.png"), 415, 290, 95, 95, 650 - this.game.screenDims.x, 600 - this.game.screenDims.y, 95, 95);
+		// pentagrams
+		ctx.drawImage(ASSET_MANAGER.getAsset("./img/miscItems2.png"), 320, 290, 95, 95, (5 + i)  - this.game.screenDims.x, (5 + j) - this.game.screenDims.y, 95, 95);
+		ctx.drawImage(ASSET_MANAGER.getAsset("./img/miscItems2.png"), 415, 290, 95, 95, (650 + i)  - this.game.screenDims.x, (600 + j)  - this.game.screenDims.y, 95, 95);
 
-    // bones
-	ctx.drawImage(ASSET_MANAGER.getAsset("./img/miscItems2.png"), 0, 450, 65, 60, 100 - this.game.screenDims.x, 100 - this.game.screenDims.y, 65, 60);
-	ctx.drawImage(ASSET_MANAGER.getAsset("./img/miscItems2.png"), 0, 450, 65, 60, 350 - this.game.screenDims.x, 0 - this.game.screenDims.y, 65, 60);
-	ctx.drawImage(ASSET_MANAGER.getAsset("./img/miscItems2.png"), 0, 450, 65, 60, 520 - this.game.screenDims.x, 300 - this.game.screenDims.y, 65, 60);
-	ctx.drawImage(ASSET_MANAGER.getAsset("./img/miscItems2.png"), 0, 450, 65, 60, 80 - this.game.screenDims.x, 650 - this.game.screenDims.y, 65, 60);
-
-
+		// bones
+		ctx.drawImage(ASSET_MANAGER.getAsset("./img/miscItems2.png"), 0, 450, 65, 60, (100 + i)  - this.game.screenDims.x, (100 + j) - this.game.screenDims.y, 65, 60);
+		ctx.drawImage(ASSET_MANAGER.getAsset("./img/miscItems2.png"), 0, 450, 65, 60, (350 + i)  - this.game.screenDims.x, j - this.game.screenDims.y, 65, 60);
+		ctx.drawImage(ASSET_MANAGER.getAsset("./img/miscItems2.png"), 0, 450, 65, 60, (520 + i)  - this.game.screenDims.x, (300 + j) - this.game.screenDims.y, 65, 60);
+		ctx.drawImage(ASSET_MANAGER.getAsset("./img/miscItems2.png"), 0, 450, 65, 60, (80 + i)  - this.game.screenDims.x, (650 + j) - this.game.screenDims.y, 65, 60);
+	}}
 }
 
 // the "main" code begins here
@@ -923,6 +998,7 @@ ASSET_MANAGER.queueDownload("./img/floor.png");
 ASSET_MANAGER.queueDownload("./img/floor_resize.png");
 ASSET_MANAGER.queueDownload("./img/miscItems3.png");
 ASSET_MANAGER.queueDownload("./img/miscItems2.png");
+ASSET_MANAGER.queueDownload("./img/Frankenstein.png");
 
 ASSET_MANAGER.downloadAll(function () {
     console.log("starting up da sheild");
@@ -935,7 +1011,7 @@ ASSET_MANAGER.downloadAll(function () {
     var pg = new PlayGame(gameEngine, 320, 350);
 
     gameEngine.screenDims = { w: 800, h: 600, x: 0, y: 0, motionbox: { left: 200, top: 200, right: 600, bottom: 400 } };
-    gameEngine.mapDims = {w: 800, h: 800};
+    gameEngine.mapDims = {w: 1600, h: 1600};
 
     var goodie = new Goodie(gameEngine, 300, 300);
     var wulf = new Wulf(gameEngine);
@@ -964,13 +1040,14 @@ ASSET_MANAGER.downloadAll(function () {
     gameEngine.addEntity(frank4);
     gameEngine.addEntity(frank5);
 
+	gameEngine.addEntity(new ElectricFrank(gameEngine, 250, 100));
 
     gameEngine.walls = walls;
     gameEngine.running = false;
 
     gameEngine.user = wulf; // need a user for screen scrolling
 
-    gameEngine.generateMap(800, 800);
+    gameEngine.generateMap(1600, 1600);
     //for (var i = 0; i < walls.length; i++){console.log(walls[i].x + " " + walls[i].y);}
 
     gameEngine.init(ctx);
