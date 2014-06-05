@@ -150,6 +150,7 @@ function GameEngine(HTMLscore) {
     this.surfaceHeight = null;
     this.score = 0;
     this.running = false;
+    this.isDialog = false;
 
     this.HTMLscore = HTMLscore;
     this.HTMLscore.innerHTML = "Score: " + this.score;
@@ -298,12 +299,10 @@ GameEngine.prototype.draw = function (drawCallback) {
 // forces updates of the entities.
 GameEngine.prototype.update = function () {
     var entitiesCount = this.entities.length;
-    for (var i = 0; i < entitiesCount; i++) {
+    this.entities[0].update();
+    for (var i = 1; i < entitiesCount; i++) {
         var entity = this.entities[i];
-
-        if (!entity.removeFromWorld) {
-            entity.update();
-        }
+        if ((!entity.removeFromWorld && this.running)) entity.update();
     }
     // updating screen coordinates
     // user user x and y and the screenx and screeny
@@ -316,7 +315,7 @@ GameEngine.prototype.update = function () {
     } else if (this.user.x > this.screenDims.x + this.screenDims.motionbox.right) {
         this.screenDims.x = Math.min(this.user.x - this.screenDims.motionbox.right, this.mapDims.w - this.screenDims.w);
     } 
-    
+
     // update y screen coordinate
     if (this.user.y < this.screenDims.y + this.screenDims.motionbox.top) {
         this.screenDims.y = Math.max(this.user.y - this.screenDims.motionbox.top, 0);
@@ -361,6 +360,7 @@ function Entity(game, x, y) {
     this.x = x;
     this.y = y;
     this.removeFromWorld = false;
+    //this.type = "Entity";
 }
 
 // default updates the entity. 
@@ -396,8 +396,8 @@ function Bullet (game, entity) {
     this.y = entity.y + 22;
     this.initialX = this.x;
     this.initialY = this.y;
-    this.endx = game.mouse.x;
-    this.endy = game.mouse.y;
+    this.endx = game.mouse.x + game.screenDims.x;
+    this.endy = game.mouse.y + game.screenDims.y;
     this.speed = 5;
     this.radius = 3;
     this.boundingbox = new BoundingBox(this.x - this.radius, this.y - this.radius, 2 * this.radius, 2 * this.radius);
@@ -412,7 +412,7 @@ Wulf.prototype.constructor = Bullet;
 
 Bullet.prototype.update = function () {
     //var slope = ((this.endy - this.y)/(this.endx - this.x));
-    var magnitude = Math.sqrt(Math.pow((this.endx - this.initialX), 2) + Math.pow((this.endy - this.initialY), 2));
+    var magnitude = .5 * (Math.sqrt(Math.pow((this.endx - this.initialX), 2) + Math.pow((this.endy - this.initialY), 2)));
     this.boundingbox.left = this.boundingbox.left + (this.endx - this.initialX) / magnitude * this.speed;
     this.boundingbox.right = this.boundingbox.left + this.boundingbox.width;
     this.boundingbox.top = this.boundingbox.top + (this.endy - this.initialY) / magnitude * this.speed;
@@ -462,7 +462,7 @@ function Frank (game, wulf, x, y) {
     this.leftAnimation = new Animation(ASSET_MANAGER.getAsset("./img/frankenzombie.png"), 0, 46, 32, 49, 0.2, 4, true, false);
     this.rightAnimation = new Animation(ASSET_MANAGER.getAsset("./img/frankenzombie.png"), 0, 95, 32, 49, 0.2, 4, true, false);
     this.forwardAnimation = new Animation(ASSET_MANAGER.getAsset("./img/frankenzombie.png"), 0, 142, 32, 49, 0.2, 4, true, false);
-    
+    this.power = 0;
     this.startTimer = 0;
     this.currentTime = 0;
     this.damage = 2;
@@ -471,26 +471,30 @@ function Frank (game, wulf, x, y) {
     this.x = x;
     this.y = y;
     this.wulf = wulf;
+    this.xforce = 0;
+    this.yforce = 0;
+    this.force = 0;
     this.type = "enemy";
+    this.acceleration = 0;
+    this.direction = 0;
     this.boundingbox = new BoundingBox(this.x, this.y, 25, 50);
     
     this.pointValue = 10;
 
-    Entity.call(this, game, this.x, this.y);   
+    Entity.call(this, game, this.x, this.y);
+      
 }
 
 Frank.prototype = new Entity();
 Frank.prototype.constructor = Frank;
 
 Frank.prototype.update = function() {
-    if (this.health <= 0){ 
+     if (this.health <= 0){ 
         this.removeFromWorld = true;
         this.boundingbox.removeFromWorld = true;
         this.game.score = this.game.score + this.pointValue;
-        if (this.game.score > 40){
-            this.game.running = false;
-        }
     }
+    
     if (this.mode === "follow") {
         this.follow();
     } else {
@@ -506,7 +510,7 @@ Frank.prototype.update = function() {
             var type = pf.type;
             switch(type){
                 case "player":
-                    //console.log("hi");
+                    console.log("hi");
                     this.boundingbox.top = this.y;
                     this.boundingbox.bottom = this.boundingbox.top + this.boundingbox.height;
                     this.boundingbox.left = this.x;
@@ -524,13 +528,15 @@ Frank.prototype.update = function() {
                     this.boundingbox.bottom = this.boundingbox.top + this.boundingbox.height;
                     this.boundingbox.left = this.x;
                     this.boundingbox.right = this.boundingbox.left + this.boundingbox.width;
+                        this.xforce = this.xforce * -.5;
+                        this.yforce = this.yforce * -.5;
                     collide = true;                    
                     break;
             }
         } 
     } 
     if(!collide) {
-        //console.log("ho");
+//        console.log("ho");
         this.y = this.boundingbox.top;
         this.x = this.boundingbox.left;
         if(this.currentTime - this.startTimer > 1000) {
@@ -542,7 +548,7 @@ Frank.prototype.update = function() {
         }
         
     }
-        
+//    console.log(this.boundingbox.top);    
 }
 
 Frank.prototype.attack = function() {
@@ -551,33 +557,151 @@ Frank.prototype.attack = function() {
 }
 
 Frank.prototype.follow = function() {
-    var speed = 100 * this.game.clockTick;
-    if(this.x < this.wulf.x) {
-        this.boundingbox.left = this.boundingbox.left + speed;
-        this.boundingbox.right = this.boundingbox.right + speed;
-        this.right = true;
-        this.left = false;
-    } else if (this.x > this.wulf.x) {
-        this.boundingbox.left = this.boundingbox.left - speed;
-        this.boundingbox.right = this.boundingbox.right - speed;
-        this.right = false;
-        this.left = true;
-    }
-    
-    if(this.y < this.wulf.y) {
-        this.boundingbox.top = this.boundingbox.top + speed;
-        this.boundingbox.bottom = this.boundingbox.bottom + speed;
-        this.forward = true; 
-        this.backwards = false;
-    } else if (this.y > this.wulf.y) {
+    var cxforce = this.xforce;
+    var cyforce = this.yforce;
+    for (var i = 0; i < this.game.walls.length; i++) {
+           
+        var e = this.game.walls[i];
         
-        this.boundingbox.top = this.boundingbox.top - speed;
-        this.boundingbox.bottom = this.boundingbox.bottom - speed;
-        this.forward = false;
-        this.backwards = true;
+        if(e.type === "wall" && getRange(this.x + 12.5,this.y + 25,e.boundingbox.left + 20,e.boundingbox.top + 20) < 60){
+        //Calculate the total force from this point on us
+            var cforce = e.power/Math.pow(getRange(this.x + 12.5,this.y + 25,e.boundingbox.left + 20 ,e.boundingbox.top + 20)/5,2);
+            console.log(cforce);
+            //this.force = cforce;
+            //Find the bearing from the point to us
+            var ang = normalize(Math.PI/2 - Math.atan2(this.y - e.y, this.x - e.x)); 
+            console.log(ang);
+            this.direction = ang;
+            
+                cxforce += (Math.sin(ang) * cforce);
+               
+                cyforce += (Math.cos(ang) * cforce);
+                
+        }
     }
     
+            
+//add target's direction    
+    var temp = this.addDestination(this.wulf.x , this.wulf.y);
+    
+    if (this.x < this.wulf.x){
+        cxforce -= .25;
+    } else {
+        cxforce += .25;
+    }
+    if (this.y < this.wulf.y){
+        cyforce -= .25;
+    } else {
+        cyforce += .25;
+    }
+
+       
+//    console.log(cyforce);
+    if (cyforce > 0) {
+        cyforce = Math.min(cyforce * .8, 2);
+    } else {
+        cyforce = Math.max(cyforce * .8, -2);
+    }
+    if (cxforce > 0) {
+        cxforce = Math.min(cxforce * .8, 2);
+    } else {
+        cxforce = Math.max(cxforce * .8, -2);
+    }
+
+    //Move in the direction of our resolved force.
+    //this.game.goTo(this.x - this.xforce, this.y + this.yforce, this);
+    
+    this.boundingbox.top -= cyforce;
+    this.boundingbox.bottom -= cyforce;
+    this.boundingbox.left -= cxforce;
+    this.boundingbox.right -= cxforce;
+    
+    this.xforce = cxforce;
+    this.yforce = cyforce;
+    //this.force = cforce;
+   
+   
+   
+       /* var v = f(this.boundingbox.left, this.boundingbox.top, this.game.walls);
+        
+        this.boundingbox.left += v.x;
+        this.boundingbox.top += v.y;
+        */
 }
+
+Frank.prototype.addDestination = function( x,  y) {
+    
+    var angleTo = normalize(Math.PI/2 - Math.atan2(this.y - y, this.x - x));
+    var cxforce, cyforce;
+    if (this.y < y) {
+        cyforce = (Math.cos(angleTo) * .8); 
+    } else {
+        cyforce = (Math.cos(angleTo) * -.8); 
+    }
+    if (this.x > x) {
+        cxforce = (Math.sin(angleTo) * .8); 
+    } else {
+        cxforce = (Math.sin(angleTo) * -.8); 
+    }
+            
+       
+    return {x : cxforce, y: cyforce};
+}
+
+function getForce(x, y, obstacle) {
+    if (obstacle.power ){
+        var magnitude = obstacle.power/Math.pow(getRange(x,y,obstacle.boundingbox.left,obstacle.boundingbox.top),2);
+    }
+    
+   var direction = {x: obstacle.boundingbox.left - x, y: obstacle.boundingbox.top - y };
+   
+   var ang = normalize(Math.PI/2 - Math.atan2(direction.y, direction.x));
+   direction.x = Math.sin(ang) * magnitude;
+   direction.y = Math.cos(ang) * magnitude;
+   if(direction.x && direction.y) {
+       return direction;
+   } else {
+       return {x:0, y:0};
+   }
+   
+}
+
+function f(x, y, obstacles) {
+   var force = {x: 0, y: 0};
+   for(var i = 0; i < obstacles.length; i++) {
+      var obstacleForce = getForce(x, y, obstacles[i]);
+      force.x += obstacleForce.x;
+      force.y += obstacleForce.y;
+   }
+   //console.log(force.x);console.log(force.y);
+   
+   return force;
+}
+
+/*GameEngine.prototype.goTo =  function(x, y, entity) {
+    console.log(y);
+    entity.boundingbox.top = y;
+    entity.boundingbox.bottom = entity.boundingbox.top + entity.height;
+    entity.boundingbox.left = x; 
+    entity.boundingbox.right = entity.boundingbox.left + entity.width;
+   // entity.forward = true; 
+}*/
+
+//Returns the distance between two points
+function getRange(x1, y1, x2, y2) {
+    var x = x2 - x1;
+    var y = y2 - y1;
+    var range = Math.sqrt(x * x + y * y);
+    return range;	
+}
+
+function normalize(ang) {
+		if (ang > Math.PI)
+			ang -= 2*Math.PI;
+		if (ang < -Math.PI)
+			ang += 2*Math.PI;
+		return ang;
+	}
 
 Frank.prototype.draw = function(ctx) {
     if (this.forward) {
@@ -601,6 +725,72 @@ Frank.prototype.draw = function(ctx) {
     
 }
 
+function DialogBox(game, portrait, text){
+    this.portrait = portrait;
+    this.text = text;  
+    this.type = "DialogBox"
+    this.removeFromWorld = false;
+}
+
+DialogBox.prototype = new Entity();
+DialogBox.prototype.constructor = DialogBox;
+
+DialogBox.prototype.draw = function(ctx){
+    ctx.strokeStyle = "green"; 
+    ctx.fillStyle = "black";
+    ctx.fillRect(0, 350, 800, 250);
+    ctx.drawImage(ASSET_MANAGER.getAsset(this.portrait.file), this.portrait.x, this.portrait.y, 
+        this.portrait.w, this.portrait.h, 20, 400, 80, 100);
+    ctx.fillStyle = "white";
+    ctx.font = "14pt Arial";
+    for(var i = 0; i < this.text.length; i++){
+    ctx.fillText(this.text[i], 150, 400 + 25 * i);  
+    }
+}
+
+DialogBox.prototype.update = function(ctx){
+    
+}
+
+function Dialog(game){
+    this.game = game;
+    this.boxes = [];
+    this.i = 0;
+    this.currentBox = new Entity(this.game);
+    this.type = "Dialog";
+    this.removeFromWorld = false;
+}
+
+Dialog.prototype = new Entity();
+Dialog.prototype.constructor = Dialog;
+
+Dialog.prototype.update = function(ctx){
+    if (this.game.click){
+        if (this.i < this.boxes.length - 1){
+            this.currentBox.removeFromWorld = true;
+            this.i ++;
+            this.currentBox = this.boxes[this.i];
+            this.game.addEntity(this.currentBox);
+            this.currentBox = this.boxes[this.i];
+            console.log("updating dialog");
+            console.log("current = " + this.currentIndex + "boxes.length = " + this.boxes.length);
+        }
+        else {
+            console.log("end of boxes");
+            this.game.isDialog = false;
+            this.currentBox.removeFromWorld = true;
+            this.removeFromWorld = true;
+        }
+    }
+}
+
+Dialog.prototype.draw = function(ctx){
+    this.boxes[this.i].draw;
+}
+
+Dialog.prototype.addBox = function(box){
+    this.boxes.push(box);
+}
 function Inventory(game){
     this.items = [];
     this.items = ['0','0','0','0','0','0','0','0','0','0'];
@@ -617,7 +807,6 @@ function Inventory(game){
      for (i = 0; i < 8; i ++){       
          ctx.strokeRect(i * 40, 15, 40, 40);
          if (this.items[i] !== 0){
-             console.log(this.items[i]);
              ctx.drawImage(ASSET_MANAGER.getAsset("./img/tileset_base.png"), 128, 0, 30, 30,
              i * 40, 15, 40, 40);
          }
@@ -646,9 +835,11 @@ Furnishing.prototype.draw = function (ctx) {
 }
 
 function Wall(game, x, y){
+    
     this.game = game;
     this.x = x;
     this.y = y;
+    this.power = -40;
     this.removeFromWorld = false;
     this.boundingbox = new BoundingBox(x, y, 40, 40); 
     this.type = "wall";
@@ -782,7 +973,6 @@ Wulf.prototype.constructor = Wulf;
 Wulf.prototype.update = function () {
     if (this.health === 0) {
         this.removeFromWorld = true;
-        this.game.running = false;
     }
     var speed = 150  * this.game.clockTick;;
 	var bump = false;
@@ -815,7 +1005,7 @@ Wulf.prototype.update = function () {
     if (keyState['F'.charCodeAt(0)]) {
        this.right = true;
        this.moving = true;
-       if (this.x < 1575)  {
+       if (this.x < this.game.mapDims.w - 25)  {
            this.boundingbox.left = this.boundingbox.left + speed;
            this.boundingbox.right = this.boundingbox.right + speed;
        }
@@ -827,7 +1017,7 @@ Wulf.prototype.update = function () {
     if (keyState['D'.charCodeAt(0)]) {
         this.backwards = true;
         this.moving = true;
-	if (this.y < 1550) {
+	if (this.y < this.game.mapDims.h - 50) {
             
             this.boundingbox.top = this.boundingbox.top + speed;
             this.boundingbox.bottom = this.boundingbox.bottom + speed;
@@ -861,7 +1051,7 @@ Wulf.prototype.update = function () {
                     
                 case "frank":
                 case "wall":
-                    // console.log( "wolf: " + this.boundingbox.top + " " + this.boundingbox.left + " wall: " + i);
+                    //console.log( "wolf: " + this.boundingbox.top + " " + this.boundingbox.left + " wall: " + i);
                     this.boundingbox.top = this.y;
                     this.boundingbox.bottom = this.boundingbox.top + this.boundingbox.height;
                     this.boundingbox.left = this.x;
@@ -870,14 +1060,12 @@ Wulf.prototype.update = function () {
                     break;
 
                 case "goodie":
-                    case "goodie":    
-                     var i = 0;
-                     while(this.inventory.items[i] != "0"){
-                         i++;
-                         }
-                    this.inventory.items[i] = "sack";
+                    this.inventory.items.push("sack");
                     pf.removeFromWorld = true;
-                    break;                       
+
+                    break;
+                        
+                        
                 } 
             } 
         }
@@ -886,7 +1074,7 @@ Wulf.prototype.update = function () {
                 this.x = this.boundingbox.left;
             }
 	
-	   
+	 
     //var duration = this.forwardAnimation.elapsedTime + this.game.clockTick;
 }
 
@@ -947,7 +1135,10 @@ PlayGame.prototype.reset = function () {
     this.game.running = false;
 }
 PlayGame.prototype.update = function () {
-    if (this.game.click && this.game.user.health > 0) this.game.running = true;
+    if (this.game.click && this.game.user.health > 0) {
+        this.game.isDialog = true;
+        this.game.running = true;
+    }
 }
 
 PlayGame.prototype.draw = function (ctx) {
@@ -970,6 +1161,7 @@ PlayGame.prototype.draw = function (ctx) {
 
 function GameBoard(game) {
     Entity.call(this, game, 0, 0);
+    this.type = "gameboard";
 }
 
 // gameboard is an entity
@@ -1020,6 +1212,7 @@ GameBoard.prototype.draw = function (ctx) {
 
 var ASSET_MANAGER = new AssetManager();
 ASSET_MANAGER.queueDownload("./img/Wulf.png");
+ASSET_MANAGER.queueDownload("./img/wolfenstein.png");
 ASSET_MANAGER.queueDownload("./img/tileset_base.png");
 ASSET_MANAGER.queueDownload("./img/frankenzombie.png");
 ASSET_MANAGER.queueDownload("./img/floor.png");
@@ -1027,6 +1220,8 @@ ASSET_MANAGER.queueDownload("./img/floor_resize.png");
 ASSET_MANAGER.queueDownload("./img/miscItems3.png");
 ASSET_MANAGER.queueDownload("./img/miscItems2.png");
 ASSET_MANAGER.queueDownload("./img/Frankenstein.png");
+ASSET_MANAGER.queueDownload("./img/soledad.png");
+ASSET_MANAGER.queueDownload("./img/chuck.png");
 
 ASSET_MANAGER.downloadAll(function () {
     console.log("starting up da sheild");
@@ -1049,7 +1244,38 @@ ASSET_MANAGER.downloadAll(function () {
     var frank4 = new Frank(gameEngine, wulf, 50, 750);
     var frank5 = new Frank(gameEngine, wulf, 725, 725);
     var walls = [];
+    var openingDialog = new Dialog(gameEngine);
     var inv = new Inventory(gameEngine);
+    var wulfPortraitL = {file:"./img/wolfenstein.png", x:15, y:37, w:80, h:100};
+    var wulfPortraitR = {file:"./img/wolfenstein.png", x:175, y:37, w:80, h:100};
+    var wulfPortraitC = {file:"./img/wolfenstein.png", x:95, y:37, w:80, h:100};
+    var soledadPortrait = {file:"./img/soledad.png", x:0, y:0, w:160, h:200};
+    var blackSquare = {file:"./img/wolfenstein.png", x:20, y:64, w:1, h:1};
+    var chuckPortrait = {file:"./img/chuck.png", x:0, y:0, w:125, h:160};
+
+    openingDialog.addBox(new DialogBox(this, wulfPortraitL, ["...."]));
+    openingDialog.addBox(new DialogBox(this, wulfPortraitL, ["Wulf Blitzer: I can remember the fire. My plane must have crashed"]));
+    openingDialog.addBox(new DialogBox(this, wulfPortraitL, ["Where am I?"]));
+    openingDialog.addBox(new DialogBox(this, wulfPortraitC, ["My Journalistic Instincts tell me I've traveled back in time again. . . ."]));
+    openingDialog.addBox(new DialogBox(this, wulfPortraitR, ["But how far?  And where did all these Frankensteins come from?"]));
+    openingDialog.addBox(new DialogBox(this, blackSquare,["(ring . . . ring . . .)"]));
+    openingDialog.addBox(new DialogBox(this, wulfPortraitL,["We get signal? Cell phone turn on."]));
+    openingDialog.addBox(new DialogBox(this, soledadPortrait, ["Wulf, is that you? Thank gosh you survived!"]));
+    openingDialog.addBox(new DialogBox(this, soledadPortrait, ["We lost radio contact with your plane and I was so worried."]));
+    openingDialog.addBox(new DialogBox(this, wulfPortraitL, ["The living brain of Idi Amin wasn't able to kill me, Soledad O'Brian", "It's gonna take more than a little plane crash."]));
+    openingDialog.addBox(new DialogBox(this, soledadPortrait,[". . . . "]));
+    openingDialog.addBox(new DialogBox(this, wulfPortraitC, ["Soledad, I'm losing the signal. Check the CNN temporal radar and", "tell me where in history I've landed."]));
+    openingDialog.addBox(new DialogBox(this, chuckPortrait, ["I'm way ahead of you, Wulf!"]));
+    openingDialog.addBox(new DialogBox(this, wulfPortraitL, ["You're a sight for sore eyes, colossal douchebag Chuck Todd."]));
+    openingDialog.addBox(new DialogBox(this, chuckPortrait, ["You gave us all a heck of a scare, Wulf.", "The CNN temporal radar shows you've landed in the year 1792"]));
+    openingDialog.addBox(new DialogBox(this, wulfPortraitC, ["Chuck, I need you to put Soledad back on and never speak again."]));
+    openingDialog.addBox(new DialogBox(this, chuckPortrait, ["10-4, good buddy.", "(hee hee, classic Wulf.)"]));
+    openingDialog.addBox(new DialogBox(this, soledadPortrait, ["I'm here, Wulf. Sensors show you should be able to use your", "phone at critical areas in the castle.", "Find these 'hot spots' and check back in with your progress.", "We might be able to help." ]));
+    openingDialog.addBox(new DialogBox(this, wulfPortraitR, ["I'll try, Soledad O'Brien. I've tangled with Frankensteins before, but ", "something tells me this will be my most", "terrifying adventure yet."]));
+    openingDialog.addBox(new DialogBox(this, soledadPortrait, ["Kill them all, Wulf. Kill them with your modern firearms and ", "huge muscles. Kill them and come home to me."]));
+    openingDialog.addBox(new DialogBox(this, wulfPortraitC, [". . . ."]));
+
+
     wulf.inventory = inv;
 
     walls.push(goodie);
@@ -1070,7 +1296,7 @@ ASSET_MANAGER.downloadAll(function () {
     gameEngine.addEntity(frank4);
     gameEngine.addEntity(frank5);
 
-	gameEngine.addEntity(new ElectricFrank(gameEngine, 250, 100));
+    gameEngine.addEntity(new ElectricFrank(gameEngine, 250, 100));
 
     gameEngine.walls = walls;
     gameEngine.running = false;
@@ -1078,9 +1304,25 @@ ASSET_MANAGER.downloadAll(function () {
     gameEngine.user = wulf; // need a user for screen scrolling
 
     gameEngine.generateMap(1600, 1600);
+    for(var i = 0; i < gameEngine.mapDims.w; i+=40) {
+        walls.push(new Wall(gameEngine, i, -40));
+        walls.push(new Wall(gameEngine, i, gameEngine.mapDims.h + 440));
+        console.log(gameEngine.mapDims.h + 440);
+    }
+    for(var i = 0; i < gameEngine.mapDims.h; i+=40) {
+        walls.push(new Wall(gameEngine, -40, i));
+        walls.push(new Wall(gameEngine, gameEngine.mapDims.w + 640,i ));
+    }
+    
+    for(i = 0; i < walls.length; i++) {
+        if(walls[i].type) {
+            console.log(walls[i].type);
+        }
+        
+    }
     gameEngine.addEntity(inv);
+    //gameEngine.addEntity(openingDialog);
     //for (var i = 0; i < walls.length; i++){console.log(walls[i].x + " " + walls[i].y);}
-
     gameEngine.init(ctx);
     gameEngine.start();
 });
