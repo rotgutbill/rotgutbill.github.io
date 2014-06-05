@@ -407,6 +407,7 @@ function Bullet (game, entity) {
     this.radius = 3;
     this.boundingbox = new BoundingBox(this.x - this.radius, this.y - this.radius, 2 * this.radius, 2 * this.radius);
     this.damage = 1;
+ //   this.damage = 100; // GOD MODE. REMOVE BEFORE TURNING IN
     Entity.call(this, game, this.x, this.y);
     //this.speed = entity.gun.speed;
     
@@ -453,8 +454,8 @@ Bullet.prototype.draw = function (ctx) {
     ctx.arc(this.x - this.game.screenDims.x, this.y - this.game.screenDims.y, this.radius, 0, 2 * Math.PI, false);
     ctx.fill();
     
-    ctx.strokeStyle = "green";
-    ctx.strokeRect(this.x - this.game.screenDims.x, this.y - this.game.screenDims.y, this.boundingbox.width, this.boundingbox.height);
+//    ctx.strokeStyle = "green";
+//    ctx.strokeRect(this.x - this.game.screenDims.x, this.y - this.game.screenDims.y, this.boundingbox.width, this.boundingbox.height);
 }
 
 
@@ -534,8 +535,8 @@ Frank.prototype.update = function() {
                     this.boundingbox.bottom = this.boundingbox.top + this.boundingbox.height;
                     this.boundingbox.left = this.x;
                     this.boundingbox.right = this.boundingbox.left + this.boundingbox.width;
-                        this.xforce = this.xforce * -.5;
-                        this.yforce = this.yforce * -.5;
+                    this.xforce = this.xforce * -.5;
+                    this.yforce = this.yforce * -.5;
                     collide = true;                    
                     break;
             }
@@ -726,8 +727,8 @@ Frank.prototype.draw = function(ctx) {
         this.forwardAnimation.drawFrame(this.game.clockTick, ctx, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y);
     }
     
-    ctx.strokeStyle = "green"; 
-    ctx.strokeRect(this.boundingbox.left - this.game.screenDims.x, this.boundingbox.top - this.game.screenDims.y, this.boundingbox.width, this.boundingbox.height);
+//    ctx.strokeStyle = "green"; 
+//   ctx.strokeRect(this.boundingbox.left - this.game.screenDims.x, this.boundingbox.top - this.game.screenDims.y, this.boundingbox.width, this.boundingbox.height);
     
 }
 
@@ -808,6 +809,7 @@ Dialog.prototype.addBox = function(box){
 function Inventory(game){
     this.items = [];
     this.items = ['0','0','0','0','0','0','0','0','0','0'];
+    this.radius = 6;
      for(i=0; i < this.items.length; i++){
          this.items [i] = 0;
      }
@@ -820,10 +822,20 @@ function Inventory(game){
      ctx.strokeStyle = "yellow";
      for (i = 0; i < 8; i ++){       
          ctx.strokeRect(i * 40, 15, 40, 40);
-         if (this.items[i] !== 0){
+         console.log(this.items[i]);
+         if (this.items[i].type === "goodie"){
              ctx.drawImage(ASSET_MANAGER.getAsset("./img/tileset_base.png"), 128, 0, 30, 30,
              i * 40, 15, 40, 40);
          }
+         
+        ctx.fillStyle = "white";
+        ctx.beginPath();
+        ctx.arc(i * 40 + 8, 24, this.radius, 0, 2 * Math.PI, false);
+        ctx.fill();
+         
+         ctx.fillStyle = "blue";
+         ctx.font = "8pt Arial";
+         ctx.fillText(i + 1, i * 40 + 5, 28);
      }
  }
  Inventory.prototype.update = function (ctx) {
@@ -843,9 +855,9 @@ Furnishing.prototype.constructor = Furnishing;
 Furnishing.prototype.draw = function (ctx) {
     ctx.drawImage(ASSET_MANAGER.getAsset("./img/floor.png"), 128, 128,
     30, 30, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y, 40, 40)
-    ctx.strokeStyle = "green";
-    ctx.strokeRect(this.boundingbox.left - this.game.screenDims.x, this.boundingbox.top - this.game.screenDims.y, this.
-        boundingbox.width, this.boundingbox.height);
+//    ctx.strokeStyle = "green";
+//    ctx.strokeRect(this.boundingbox.left - this.game.screenDims.x, this.boundingbox.top - this.game.screenDims.y, this.
+//        boundingbox.width, this.boundingbox.height);
 }
 
 function Wall(game, x, y){
@@ -865,9 +877,9 @@ Wall.prototype.constructor = Wall;
 Wall.prototype.draw = function(ctx){
     ctx.drawImage(ASSET_MANAGER.getAsset("./img/miscItems2.png"), 130, 415, // 600, 240,  // pit for walls  160, 480
     30, 65, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y - 20, 40, 65)
-        ctx.strokeStyle = "green";
-        ctx.strokeRect(this.boundingbox.left - this.game.screenDims.x, this.boundingbox.top - this.game.screenDims.y, this.
-            boundingbox.width, this.boundingbox.height);
+//        ctx.strokeStyle = "green";
+ //       ctx.strokeRect(this.boundingbox.left - this.game.screenDims.x, this.boundingbox.top - this.game.screenDims.y, this.
+ //           boundingbox.width, this.boundingbox.height);
 }
 
 function Goodie(game, x, y){
@@ -885,9 +897,9 @@ Goodie.prototype.constructor = Goodie;
 Goodie.prototype.draw = function(ctx){
     ctx.drawImage(ASSET_MANAGER.getAsset("./img/tileset_base.png"), 128, 0, 30, 30,
                                          this.x - this.game.screenDims.x, this.y - this.game.screenDims.y, 40, 40);
-    ctx.strokeStyle = "green";
-    ctx.strokeRect(this.boundingbox.x - this.game.screenDims.x, this.boundingbox.y - this.game.screenDims.y, this.
-            boundingbox.width, this.boundingbox.height);
+//    ctx.strokeStyle = "green";
+//    ctx.strokeRect(this.boundingbox.x - this.game.screenDims.x, this.boundingbox.y - this.game.screenDims.y, this.
+//            boundingbox.width, this.boundingbox.height);
 }
 
 
@@ -974,7 +986,7 @@ function Wulf (game) {
     this.centerY = 10;
     this.startTimer = 0;
     this.boundingbox = new BoundingBox(this.centerX, this.centerY, 25, 50);
-    this.inventory = new Inventory(game);
+    this.inventory = new Inventory();
     this.type = "player";
     this.health = 10;
     Entity.call(this, game, 40, 10);
@@ -1082,7 +1094,7 @@ Wulf.prototype.update = function () {
                     break;
 
                 case "goodie":
-                    this.inventory.items.push("sack");
+                    this.inventory.items.push(pf);
                     pf.removeFromWorld = true;
 
                     break;
@@ -1118,8 +1130,8 @@ Wulf.prototype.draw = function(ctx) {
         this.lastAnimation.drawFrame(this.game.clockTick, ctx, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y);
     }
     
-    ctx.strokeStyle = "green";
-    ctx.strokeRect(this.boundingbox.left - this.game.screenDims.x, this.boundingbox.top - this.game.screenDims.y, this.boundingbox.width, this.boundingbox.height);
+//    ctx.strokeStyle = "green";
+//    ctx.strokeRect(this.boundingbox.left - this.game.screenDims.x, this.boundingbox.top - this.game.screenDims.y, this.boundingbox.width, this.boundingbox.height);
     
     
 }
@@ -1300,7 +1312,7 @@ ASSET_MANAGER.downloadAll(function () {
     openingDialog.addBox(new DialogBox(this, wulfPortraitC, [". . . ."]));
 
 
-    wulf.inventory = inv;
+    //wulf.inventory = inv;
 
     walls.push(goodie);
     walls.push(frank1);
@@ -1344,7 +1356,7 @@ ASSET_MANAGER.downloadAll(function () {
         }
         
     }
-    gameEngine.addEntity(inv);
+    gameEngine.addEntity(wulf.inventory);
     gameEngine.addEntity(openingDialog);
     //for (var i = 0; i < walls.length; i++){console.log(walls[i].x + " " + walls[i].y);}
     gameEngine.init(ctx);
