@@ -745,6 +745,8 @@ DialogBox.prototype.draw = function(ctx){
     ctx.font = "14pt Arial";
     for(var i = 0; i < this.text.length; i++){
     ctx.fillText(this.text[i], 150, 400 + 25 * i);  
+    ctx.font = "10pt Arial";
+    ctx.fillText("(press 'q' to skip)", 500, 550);
     }
 }
 
@@ -782,6 +784,12 @@ Dialog.prototype.update = function(ctx){
             this.removeFromWorld = true;
         }
     }
+    
+    if (keyState['Q'.charCodeAt(0)]) {
+        this.game.isDialog = false;
+        this.currentBox.removeFromWorld = true;
+        this.removeFromWorld = true;
+        }      
 }
 
 Dialog.prototype.draw = function(ctx){
@@ -1321,7 +1329,7 @@ ASSET_MANAGER.downloadAll(function () {
         
     }
     gameEngine.addEntity(inv);
-    //gameEngine.addEntity(openingDialog);
+    gameEngine.addEntity(openingDialog);
     //for (var i = 0; i < walls.length; i++){console.log(walls[i].x + " " + walls[i].y);}
     gameEngine.init(ctx);
     gameEngine.start();
