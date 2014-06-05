@@ -148,12 +148,15 @@ function GameEngine(HTMLscore) {
     this.wheel = null;
     this.surfaceWidth = null;
     this.surfaceHeight = null;
+    this.HTMLhealth = document.getElementById('health');;
     this.score = 0;
+    this.health = 10;
     this.running = false;
     this.isDialog = false;
 
     this.HTMLscore = HTMLscore;
     this.HTMLscore.innerHTML = "Score: " + this.score;
+    this.HTMLhealth.innerHTML = "Health: " + this.health;
 }
 
 // initializes the canvas manager
@@ -335,6 +338,7 @@ GameEngine.prototype.update = function () {
     }
 
     this.HTMLscore.innerHTML = "Score: " + this.score;
+    this.HTMLhealth.innerHTML = "Health: " + this.health;
 
 }
 
@@ -518,6 +522,7 @@ Frank.prototype.update = function() {
                     collide = true;
                     this.mode = "attack";
                     this.wulf.health = this.wulf.health - this.damage;
+                    this.game.health -= this.damage;
                     this.startTimer = Date.now();
                     
                     break;
@@ -979,7 +984,8 @@ Wulf.prototype.constructor = Wulf;
 
 //stack overflow suggestion on saving the key state.
 Wulf.prototype.update = function () {
-    if (this.health === 0) {
+    if (this.health <= 0) {
+        this.game.health = 0;
         this.removeFromWorld = true;
     }
     var speed = 150  * this.game.clockTick;;
@@ -1157,7 +1163,7 @@ PlayGame.prototype.draw = function (ctx) {
         if (this.game.score > 40){
             ctx.fillText("A winner is Wulf!", this.x, this.y);
         }
-        else if (this.game.user.health > 0) {
+        else if (this.game.health > 0) {
             ctx.fillText("Click to Play!", this.x, this.y);
         }
         else {
@@ -1235,9 +1241,11 @@ ASSET_MANAGER.downloadAll(function () {
     console.log("starting up da sheild");
     var canvas = document.getElementById('gameWorld');
     var HTMLscore = document.getElementById('score');
+    //var HTMLhealth = document.getElementById('health');
     var ctx = canvas.getContext('2d');
 
     var gameEngine = new GameEngine(HTMLscore);
+    //gameEngine.HTMLhealth = HTMLhealth;
     var gameboard = new GameBoard(gameEngine);
     var pg = new PlayGame(gameEngine, 320, 350);
 
