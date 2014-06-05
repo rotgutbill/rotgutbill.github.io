@@ -24,7 +24,7 @@ function AssetManager() {
 
 // downloads the queue
 AssetManager.prototype.queueDownload = function (path) {
-    console.log(path.toString());
+    //console.log(path.toString());
     this.downloadQueue.push(path);
 }
 
@@ -515,7 +515,7 @@ Frank.prototype.update = function() {
             var type = pf.type;
             switch(type){
                 case "player":
-                    console.log("hi");
+                    //console.log("hi");
                     this.boundingbox.top = this.y;
                     this.boundingbox.bottom = this.boundingbox.top + this.boundingbox.height;
                     this.boundingbox.left = this.x;
@@ -572,11 +572,11 @@ Frank.prototype.follow = function() {
         if(e.type === "wall" && getRange(this.x + 12.5,this.y + 25,e.boundingbox.left + 20,e.boundingbox.top + 20) < 60){
         //Calculate the total force from this point on us
             var cforce = e.power/Math.pow(getRange(this.x + 12.5,this.y + 25,e.boundingbox.left + 20 ,e.boundingbox.top + 20)/5,2);
-            console.log(cforce);
+            //console.log(cforce);
             //this.force = cforce;
             //Find the bearing from the point to us
             var ang = normalize(Math.PI/2 - Math.atan2(this.y - e.y, this.x - e.x)); 
-            console.log(ang);
+            //console.log(ang);
             this.direction = ang;
             
                 cxforce += (Math.sin(ang) * cforce);
@@ -751,9 +751,9 @@ DialogBox.prototype.draw = function(ctx){
     ctx.font = "14pt Arial";
     for(var i = 0; i < this.text.length; i++){
     ctx.fillText(this.text[i], 150, 400 + 25 * i);  
+    }
     ctx.font = "10pt Arial";
     ctx.fillText("(press 'q' to skip)", 500, 550);
-    }
 }
 
 DialogBox.prototype.update = function(ctx){
@@ -780,11 +780,11 @@ Dialog.prototype.update = function(ctx){
             this.currentBox = this.boxes[this.i];
             this.game.addEntity(this.currentBox);
             this.currentBox = this.boxes[this.i];
-            console.log("updating dialog");
-            console.log("current = " + this.currentIndex + "boxes.length = " + this.boxes.length);
+            //console.log("updating dialog");
+            //console.log("current = " + this.currentIndex + "boxes.length = " + this.boxes.length);
         }
         else {
-            console.log("end of boxes");
+            //console.log("end of boxes");
             this.game.isDialog = false;
             this.currentBox.removeFromWorld = true;
             this.removeFromWorld = true;
@@ -972,6 +972,7 @@ function Wulf (game) {
     this.moving = false;
     this.centerX = 40;
     this.centerY = 10;
+    this.startTimer = 0;
     this.boundingbox = new BoundingBox(this.centerX, this.centerY, 25, 50);
     this.inventory = new Inventory(game);
     this.type = "player";
@@ -1044,8 +1045,13 @@ Wulf.prototype.update = function () {
     }
     
     if (keyState[' '.charCodeAt(0)]) {
+        this.currentTime = Date.now();
+        if(this.currentTime - this.startTimer > 200) {
+        this.startTimer = this.currentTime;
+        this.currentTime = 0;
         var bullet = new Bullet(this.game, this);
         this.game.addEntity(bullet);
+        }   
     } else {
         
     }
@@ -1325,7 +1331,7 @@ ASSET_MANAGER.downloadAll(function () {
     for(var i = 0; i < gameEngine.mapDims.w; i+=40) {
         walls.push(new Wall(gameEngine, i, -40));
         walls.push(new Wall(gameEngine, i, gameEngine.mapDims.h + 440));
-        console.log(gameEngine.mapDims.h + 440);
+        //console.log(gameEngine.mapDims.h + 440);
     }
     for(var i = 0; i < gameEngine.mapDims.h; i+=40) {
         walls.push(new Wall(gameEngine, -40, i));
@@ -1334,7 +1340,7 @@ ASSET_MANAGER.downloadAll(function () {
     
     for(i = 0; i < walls.length; i++) {
         if(walls[i].type) {
-            console.log(walls[i].type);
+            //console.log(walls[i].type);
         }
         
     }
