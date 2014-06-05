@@ -338,6 +338,7 @@ GameEngine.prototype.update = function () {
     }
 
     this.HTMLscore.innerHTML = "Score: " + this.score;
+    if (this.score > 40) this.running = false;
     this.HTMLhealth.innerHTML = "Health: " + this.health;
 
 }
@@ -987,6 +988,7 @@ Wulf.prototype.update = function () {
     if (this.health <= 0) {
         this.game.health = 0;
         this.removeFromWorld = true;
+        this.game.running = false;
     }
     var speed = 150  * this.game.clockTick;;
 	var bump = false;
