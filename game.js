@@ -958,6 +958,7 @@ BallLightening.prototype.update = function () {
 						points[j].y <= entity.boundingbox.bottom) {
 					
 						switch (entity.type)  { // using a switch statement as a filter for indestructible objs.
+						case "enemy": 
 						case "goodie":	return;	   // without the break(s) all cases run the same code 
 						case "wall": entity = false; // simulating an if/else chain statement.
 						}
@@ -987,6 +988,7 @@ BallLightening.prototype.update = function () {
 		
 		if (collision.victim) {
 			collision.victim.health -= this.damage;
+			this.game.health -= this.damage;
 		}
 		this.dead = true;
 	}
@@ -1016,8 +1018,8 @@ function ElectricFrank( game, x, y) {
     this.downAnime = new Animation(ASSET_MANAGER.getAsset("./img/Frankenstein.png"), 33, 70, 41, 52, 0.2, 4, true, false);
 	this.upAnime = new Animation(ASSET_MANAGER.getAsset("./img/Frankenstein.png"), 197, 70, 41, 52, 0.2, 4, true, false);
     // got hit animations.
-	this.upAnimeS = new Animation(ASSET_MANAGER.getAsset("./img/Frankenstein.png"), 30, 210, 56, 55, 0.2, 6, true, false);
-    this.downAnimeS = new Animation(ASSET_MANAGER.getAsset("./img/Frankenstein.png"), 30, 280, 56, 55, 0.2, 6, true, false);
+	this.downAnimeS = new Animation(ASSET_MANAGER.getAsset("./img/Frankenstein.png"), 30, 210, 56, 55, 0.2, 6, true, false);
+    this.upAnimeS = new Animation(ASSET_MANAGER.getAsset("./img/Frankenstein.png"), 30, 280, 56, 55, 0.2, 6, true, false);
     this.leftAnimeS = new Animation(ASSET_MANAGER.getAsset("./img/Frankenstein.png"), 9, 350, 48, 60, 0.2, 4, true, false);
     this.rightAnimeS = new Animation(ASSET_MANAGER.getAsset("./img/Frankenstein.png"), 193, 350, 48, 60, 0.2, 4, true, false);
     // trailing lightening
@@ -1038,7 +1040,7 @@ function ElectricFrank( game, x, y) {
 	
 	this.CurrentTick = game.clockTick;
 	this.count = 0;
-	
+	this.firecount = 0;
     Entity.call(this, game, x, y);
 }
 
@@ -1059,11 +1061,17 @@ ElectricFrank.prototype.update = function () {
 		return;
 	}
 	
-	if (this.health < this.healthCheck) {
-		this.hit = true;
-	} else {
-		this.hit = false;
+	if (time !== this.CurrentTick) {
+		this.firecount++;
+		this.CurrentTick = time;
 	}
+	
+	if (this.health < this.healthCheck && !this.hit) {
+		this.hit = true;
+		this.healthCheck = this.health;
+	}
+
+	if (this.hit) return;
 	
 	var getSensorInput = function () {
 		var sensor = {hearing: false, sight: true};
@@ -1089,6 +1097,7 @@ ElectricFrank.prototype.update = function () {
 		for (var i = 0; i < entitiesCount; i++) {
 			entity = that.game.walls[i];
 			if (entity === that.game.user || entity === that) { continue; }
+			
 			var deltax = entity.x - that.x; // the x component of the vector to the entity.
 			var deltay = entity.y - that.y; // the y component of the vector to the entity.
 			var entDist = Math.sqrt(deltax * deltax + deltay * deltay); 
@@ -1100,7 +1109,7 @@ ElectricFrank.prototype.update = function () {
 		
 			// if both unit vectors are not within a tolerance then continue
 			
-			if (Math.abs(deltax - x) < .12 && Math.abs(deltay - y) < .12) {
+			if (Math.abs(deltax - x) < .3 && Math.abs(deltay - y) < .3) {
 				console.log("sight");
 				sensor.sight =  false;
 				sensor.user = {x: x, y: y};
@@ -1122,7 +1131,7 @@ ElectricFrank.prototype.update = function () {
 		for (var i = 0; i < entitiesCount; i++) {
 			entity = that.game.walls[i];
 			if (!entity || entity === that) continue;
-				// checking to see if electricFrank is within the bounding box.
+				// checking to see if electricFrank is within the bounding box
 			if (entity.boundingbox) {
 				
 				// collided from the left
@@ -1136,7 +1145,7 @@ ElectricFrank.prototype.update = function () {
 					case "player": 
 						entity.health -= that.damage;
 					case "wall": 
-						that.x = lastX;
+						that.x = lastX - that.direction.x * (that.speed) ;
 					}
 					
 				} 
@@ -1152,7 +1161,7 @@ ElectricFrank.prototype.update = function () {
 					case "player": 
 						entity.health -= that.damage; // simulating an if/else chain statement.
 					case "wall": 
-						that.y = lastY;
+						that.y = lastY - that.direction.y * (that.speed);
 					}
 					
 				}
@@ -1165,17 +1174,12 @@ ElectricFrank.prototype.update = function () {
 			return false;
 	}
 	
-	if (time !== this.CurrentTick) {
-		this.count++;
-		this.CurrentTick = time;
-	}
-	
 	var input = getSensorInput();
 	
 	if (input.sight) {
-		if (this.count > 10) {
+		if (this.firecount > 10) {
 			this.game.addEntity(new BallLightening(this, this.game.user.x, this.game.user.y));
-			this.count = 0;
+			this.firecount = 0;
 		}
 		this.direction.x = input.user.x; // new x coord. 
 		this.direction.y = input.user.y; // new y coord.
@@ -1211,9 +1215,6 @@ ElectricFrank.prototype.update = function () {
 			this.targetAnime = "down";
 		}
 	} 
-
-	
-	
 	
     this.boundingbox.left = this.x + 10;
 	this.boundingbox.right = this.x + 30;
@@ -1236,8 +1237,8 @@ ElectricFrank.prototype.draw = function (ctx) {
 			this.count = 0;
 		    this.upAnime.drawFrame(this.game.clockTick, ctx, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y);
 	   	}
-		if (this.count > 5) {
-			this.healthCheck = this.health;
+		if (this.count > 40) {
+			this.hit = false;
 		}
 		break;
 	case "down":
@@ -1248,8 +1249,8 @@ ElectricFrank.prototype.draw = function (ctx) {
 			this.count = 0;
 			this.downAnime.drawFrame(this.game.clockTick, ctx, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y);
         }
-		if (this.count > 5) {
-			this.healthCheck = this.health;
+		if (this.count > 40) {
+			this.hit = false;
 		}
 		break;
 	case "right":
@@ -1260,8 +1261,8 @@ ElectricFrank.prototype.draw = function (ctx) {
 			this.count = 0;
 			this.rightAnime.drawFrame(this.game.clockTick, ctx, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y);
         }
-		if (this.count > 3) {
-			this.healthCheck = this.health;
+		if (this.count > 40) {
+			this.hit = false;
 		}
 		break;
 	case "left":
@@ -1273,8 +1274,8 @@ ElectricFrank.prototype.draw = function (ctx) {
 			this.leftAnime.drawFrame(this.game.clockTick, ctx, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y);
         }
 		
-		if (this.count > 3) {
-			this.healthCheck = this.health;
+		if (this.count > 40) {
+			this.hit = false;
 		}
 		break;
 	case "death":
