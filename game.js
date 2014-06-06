@@ -150,7 +150,7 @@ function GameEngine(HTMLscore) {
     this.surfaceHeight = null;
     this.HTMLhealth = document.getElementById('health');;
     this.score = 0;
-    this.health = 10;
+    this.health = 100;
     this.running = false;
     this.isDialog = false;
 
@@ -338,7 +338,7 @@ GameEngine.prototype.update = function () {
     }
 
     this.HTMLscore.innerHTML = "Score: " + this.score;
-    if (this.score > 40) this.running = false;
+    if (this.score > 100) this.running = false;
     this.HTMLhealth.innerHTML = "Health: " + this.health;
 
 }
@@ -431,6 +431,7 @@ Bullet.prototype.update = function () {
             var type = pf.type;
             switch(type){
                 case "enemy":
+					console.log("hit enemy");
                     pf.health -= this.damage;
                 case "wall":
                     this.boundingbox.top = this.y - this.radius;
@@ -902,8 +903,112 @@ Goodie.prototype.draw = function(ctx){
 //            boundingbox.width, this.boundingbox.height);
 }
 
+function BallLightening(owner, targetX, targetY) {
+	var xoffset = 10;
+	var yoffset  = 15;
 
-function ElectricFrank( game , x, y) {
+	this.owner = owner;
+	this.targetX = targetX + xoffset;
+	this.targetY = targetY + yoffset;
+	
+	this.directionVector = { x: targetX - owner.x , y: targetY - owner.y }; //  the direction vector used find the next location
+	this.magnitude = Math.sqrt((this.directionVector.x * this.directionVector.x) + (this.directionVector.y * this.directionVector.y)); // the magnitude of the vector.
+	
+	this.directionVector.x = this.directionVector.x / this.magnitude; // make the direction vector a unit vector
+	this.directionVector.y = this.directionVector.y / this.magnitude; // make the direction vector a unit vector
+	
+	this.deadAnimeFrames  = 4;
+	this.liveAnime = new Animation(ASSET_MANAGER.getAsset("./img/projectiles.png"), 0, 49, 17, 16, 0.2, 4, true, false);
+    this.deadAnime= new Animation(ASSET_MANAGER.getAsset("./img/projectiles.png"), 0, 49, 17, 16, 0.05, this.deadAnimeFrames, false, false);
+    
+	this.health = 100;
+	this.speed = 5;
+	this.damage = 2;
+	this.type = "lightning";
+	
+	var x = (owner.x + xoffset) + this.directionVector.x * 20;
+	var y = (owner.y + yoffset) + this.directionVector.y * 20;
+	Entity.call(this, owner.game, x, y);
+	
+}
+
+BallLightening.prototype = new Entity();
+BallLightening.prototype.constructor = BallLightening;
+
+// updates electric frank
+BallLightening.prototype.update = function () {	
+	if (this.dead) return;
+	var that = this;  // useful for the collision_check function below.
+	var points = [];  // holds the x, y coordinates for the collision check.
+	
+	// checks to see if the projectile has collided with anything.
+	var collision_check = function () {
+		var entitiesCount = that.game.entities.length;
+		var entity;
+		// check every entity.
+		for (var i = 0; i < entitiesCount; i++) {
+			entity = that.game.entities[i];
+			if (entity === that.owner) continue;
+			for (var j = 0; j < that.speed; j++) {
+				// checking to see if the projectile is within the bounding box.
+				if (entity.boundingbox && points[j]) {
+					if (points[j].x + 12>= entity.boundingbox.left &&  
+						points[j].x <= entity.boundingbox.right &&
+						points[j].y + 12 >= entity.boundingbox.top &&
+						points[j].y <= entity.boundingbox.bottom) {
+					
+						switch (entity.type)  { // using a switch statement as a filter for indestructible objs.
+						case "goodie":	return;	   // without the break(s) all cases run the same code 
+						case "wall": entity = false; // simulating an if/else chain statement.
+						}
+						return {x: points[j].x, y: points[j].y, victim: entity};
+					}
+				}
+			}
+		}
+			return false;
+	}
+	
+	for (var i = 0; i < this.speed; i++) {
+		points[i] = {x: this.x, y: this.y};  // inline obj with x and y coordinates being added to points.
+	    this.x += this.directionVector.x; // the new x location
+		this.y += this.directionVector.y; // the new y location
+	}
+	// fence post problem... I needed the original x, y coord and didnt want to change code so I moved 
+	// pre added x, y in the for loop and now I need to add the current location to points  
+	points[i] = {x: this.x, y: this.y};  // inline obj with x and y coordinates being added to points.
+	
+	
+	var collision = collision_check();  // gets the relevant collision information
+	
+	if (collision) {  // if collision is not null then a collision happened.
+		this.x = collision.x;
+		this.y = collision.y;
+		
+		if (collision.victim) {
+			collision.victim.health -= this.damage;
+		}
+		this.dead = true;
+	}
+	
+	if (this.deadAnimeFrames > 4) {
+		this.removeFromWorld = true;
+	}
+
+}
+
+BallLightening.prototype.draw = function (ctx) {
+	
+	if (this.dead) {
+		this.deadAnimeFrames--;
+		this.deadAnime.drawFrame(this.game.clockTick, ctx, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y, 1 + Math.sin(Math.PI /(4 - this.deadAnime.currentFrame())));
+	} else {
+		this.liveAnime.drawFrame(this.game.clockTick, ctx, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y);
+	}
+
+}
+
+function ElectricFrank( game, x, y) {
 	// set the animations 
 	// regular walking animations
     this.leftAnime = new Animation(ASSET_MANAGER.getAsset("./img/Frankenstein.png"), 33, 15, 41, 49, 0.2, 4, true, false);
@@ -923,6 +1028,17 @@ function ElectricFrank( game , x, y) {
 	this.speed = 1;
 	this.targetAnime = "down";
 	
+	this.boundingbox = new BoundingBox(this.x, this.y, 40, 50);
+	
+	this.damage = 3;
+	this.type = "enemy";
+	this.health = 20;
+	this.healthCheck = 20;
+	this.pointValue = 100;
+	
+	this.CurrentTick = game.clockTick;
+	this.count = 0;
+	
     Entity.call(this, game, x, y);
 }
 
@@ -931,42 +1047,244 @@ ElectricFrank.prototype.constructor = ElectricFrank;
 
 // updates electric frank
 ElectricFrank.prototype.update = function () {
+	var time = this.game.clockTick;
+	var that = this;
 
+	var lastY = this.y;
+	var lastX = this.x;
+	
+	if (this.health < 0) {
+		this.targetAnime = "death";
+		this.game.score = this.game.score + this.pointValue;
+		return;
+	}
+	
+	if (this.health < this.healthCheck) {
+		this.hit = true;
+	} else {
+		this.hit = false;
+	}
+	
+	var getSensorInput = function () {
+		var sensor = {hearing: false, sight: true};
 		
+		var x = that.game.user.x - that.x; // a from distance theorem
+		var y = that.game.user.y - that.y; // b from distance theorem
+		var distance = Math.sqrt(x * x + y * y);  // distance theorem
+		
+		x = x / distance; // getting the x component of the unit vector for the line of sight check
+		y = y / distance; // getting the y component of the unit vector for sight check
+		
+		if (distance < 1000) {
+			console.log("Distance" + distance);
+			console.log("x:" + x + " y:" + y);
+			sensor.hearing = true;
+			sensor.user = {x: x, y: y};
+		}
+		
+		var entitiesCount = that.game.walls.length;
+		var entity; 
+		
+		// check every entity.
+		for (var i = 0; i < entitiesCount; i++) {
+			entity = that.game.walls[i];
+			if (entity === that.game.user || entity === that) { continue; }
+			var deltax = entity.x - that.x; // the x component of the vector to the entity.
+			var deltay = entity.y - that.y; // the y component of the vector to the entity.
+			var entDist = Math.sqrt(deltax * deltax + deltay * deltay); 
+			
+			deltax = deltax / entDist; // get unit vector
+			deltay = deltay / entDist; // get the unit vector
+			
+			if (entDist >= distance) continue; // if the entity is further away than the user don't bother checking.
+		
+			// if both unit vectors are not within a tolerance then continue
+			
+			if (Math.abs(deltax - x) < .12 && Math.abs(deltay - y) < .12) {
+				console.log("sight");
+				sensor.sight =  false;
+				sensor.user = {x: x, y: y};
+		
+			}
+			
+		}
+		
+		return sensor;
+	
+	}
+	
+	// checks to see if the projectile has collided with anything.
+	var collision_check = function () {
+		var entitiesCount = that.game.walls.length;
+		var entity; 
+		var collide;
+		// check every entity.
+		for (var i = 0; i < entitiesCount; i++) {
+			entity = that.game.walls[i];
+			if (!entity || entity === that) continue;
+				// checking to see if electricFrank is within the bounding box.
+			if (entity.boundingbox) {
+				
+				// collided from the left
+				if ((that.x + 30 >= entity.boundingbox.left && that.x + 30 <= entity.boundingbox.right ||
+					that.x >= entity.boundingbox.left && that.x <= entity.boundingbox.right) &&
+				    (that.y + 40 >= entity.boundingbox.top && that.y + 40 <= entity.boundingbox.bottom || 
+				    that.y >= entity.boundingbox.top && that.y <= entity.boundingbox.bottom)) { 
+					collide = true;
+					switch (entity.type)  { // using a switch statement as a filter for indestructible objs.
+					case "goodie":	continue;	   // without the break(s) all cases run the same code 
+					case "player": 
+						entity.health -= that.damage;
+					case "wall": 
+						that.x = lastX;
+					}
+					
+				} 
+				
+				// collide from the top or the bottom
+				if ((that.y + 40 >= entity.boundingbox.top && that.y + 40 <= entity.boundingbox.bottom || 
+				    that.y >= entity.boundingbox.top && that.y <= entity.boundingbox.bottom) &&
+					(that.x + 30 >= entity.boundingbox.left && that.x + 30 <= entity.boundingbox.right ||
+					that.x >= entity.boundingbox.left && that.x <= entity.boundingbox.right)) { 
+					collide = true;
+					switch (entity.type)  { // using a switch statement as a filter for indestructible objs.
+					case "goodie":	continue;	   // without the break(s) all cases run the same code 
+					case "player": 
+						entity.health -= that.damage; // simulating an if/else chain statement.
+					case "wall": 
+						that.y = lastY;
+					}
+					
+				}
+				
+			}
+			
+		}
+		if (collide) return true;
+		
+			return false;
+	}
+	
+	if (time !== this.CurrentTick) {
+		this.count++;
+		this.CurrentTick = time;
+	}
+	
+	var input = getSensorInput();
+	
+	if (input.sight) {
+		if (this.count > 10) {
+			this.game.addEntity(new BallLightening(this, this.game.user.x, this.game.user.y));
+			this.count = 0;
+		}
+		this.direction.x = input.user.x; // new x coord. 
+		this.direction.y = input.user.y; // new y coord.
+	} else if (input.hearing) {
+		this.direction.x = input.user.x; // new x coord. 
+		this.direction.y = input.user.y; // new y coord.
+	} else { // then we are off the screen and we should just return.
+		this.targetAnime = "off";
+		return;
+	}
+	
+	
+	this.x += this.direction.x;
+	this.y += this.direction.y;
+	
+	collision_check();
+	
+	var absX = Math.abs(this.direction.x);
+	var absY = Math.abs(this.direction.y);
+	
+	
+	// gets the appropriate direction for the animation
+	if (absX > absY) {
+		if (this.direction.x < 0) {
+			this.targetAnime = "left";
+		} else {
+			this.targetAnime = "right";
+		}
+	} else { // (absX >= absY) 
+		if (this.direction.y < 0) {
+			this.targetAnime = "up";
+		} else {
+			this.targetAnime = "down";
+		}
+	} 
 
+	
+	
+	
+    this.boundingbox.left = this.x + 10;
+	this.boundingbox.right = this.x + 30;
+	
+    this.boundingbox.top = this.y + 10;
+	this.boundingbox.bottom = this.y + 40;
+	
 }
+
 
 ElectricFrank.prototype.draw = function (ctx) {
 
 	//this.leftAnimeS.drawFrame(this.game.clockTick, ctx, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y);
 	switch(this.targetAnime) {
 	case "up":
-	    this.upAnime.drawFrame(this.game.clockTick, ctx, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y);
-
-	   	break;
+		if (this.hit) {
+			this.upAnimeS.drawFrame(this.game.clockTick, ctx, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y);
+			this.count++;
+		} else {
+			this.count = 0;
+		    this.upAnime.drawFrame(this.game.clockTick, ctx, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y);
+	   	}
+		if (this.count > 5) {
+			this.healthCheck = this.health;
+		}
+		break;
 	case "down":
-		this.downAnime.drawFrame(this.game.clockTick, ctx, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y);
-        break;
+		if (this.hit) {
+			this.downAnimeS.drawFrame(this.game.clockTick, ctx, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y);
+			this.count++;
+		} else {
+			this.count = 0;
+			this.downAnime.drawFrame(this.game.clockTick, ctx, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y);
+        }
+		if (this.count > 5) {
+			this.healthCheck = this.health;
+		}
+		break;
 	case "right":
-	    this.rightAnime.drawFrame(this.game.clockTick, ctx, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y);
-        break;
+	    if (this.hit) {
+			this.rightAnimeS.drawFrame(this.game.clockTick, ctx, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y);
+			this.count++;
+		} else {
+			this.count = 0;
+			this.rightAnime.drawFrame(this.game.clockTick, ctx, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y);
+        }
+		if (this.count > 3) {
+			this.healthCheck = this.health;
+		}
+		break;
 	case "left":
-	    this.leftAnime.drawFrame(this.game.clockTick, ctx, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y);
-        break;
-	case "hitup":
-	    this.upAnimeS.drawFrame(this.game.clockTick, ctx, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y);
-        break;
-	case "hitdown":
-		this.downAnimeS.drawFrame(this.game.clockTick, ctx, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y);
-        break;
-	case "hitright":
-	    this.rightAnimeS.drawFrame(this.game.clockTick, ctx, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y);
-        break;
-	case "hitleft":
-	    this.leftAnimeS.drawFrame(this.game.clockTick, ctx, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y);
-        break;
+	    if (this.hit) {
+			this.leftAnimeS.drawFrame(this.game.clockTick, ctx, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y);
+			this.count++;
+		} else {
+			this.count = 0; 
+			this.leftAnime.drawFrame(this.game.clockTick, ctx, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y);
+        }
+		
+		if (this.count > 3) {
+			this.healthCheck = this.health;
+		}
+		break;
 	case "death":
 	    this.death.drawFrame(this.game.clockTick, ctx, this.x - this.game.screenDims.x, this.y - this.game.screenDims.y);
+		this.count++;
+		
+		if (this.count > 3) {
+			this.removeFromWorld = true;
+		}
+		
         break;
 	} 
 }
@@ -988,7 +1306,7 @@ function Wulf (game) {
     this.boundingbox = new BoundingBox(this.centerX, this.centerY, 25, 50);
     this.inventory = new Inventory();
     this.type = "player";
-    this.health = 10;
+    this.health = 100;
     Entity.call(this, game, 40, 10);
     
 }
@@ -1000,8 +1318,14 @@ Wulf.prototype.constructor = Wulf;
 Wulf.prototype.update = function () {
     if (this.health <= 0) {
         this.game.health = 0;
-        this.removeFromWorld = true;
-        this.game.running = false;
+		this.game.running = false;
+		this.x = 40;
+		this.y = 10;
+		this.boundingbox.left = this.centerX;
+		this.boundingbox.top = this.centerY;
+		this.boundingbox.right = this.centerX + 25;
+		this.boundingbox.bottom = this.centerY + 50;
+    
     }
     var speed = 150  * this.game.clockTick;;
 	var bump = false;
@@ -1159,6 +1483,7 @@ BoundingBox.prototype.collide = function (oth) {
 //PLAY GAME
 //====================================================================================
 function PlayGame(game, x, y) {
+	this.reset = true;
     Entity.call(this, game, x, y);
 }
 
@@ -1172,7 +1497,11 @@ PlayGame.prototype.update = function () {
     if (this.game.click && this.game.user.health > 0) {
         this.game.isDialog = true;
         this.game.running = true;
+		this.reset = false;
     }
+	if (this.game.score > 100) { 
+		this.game.running = false;
+	}
 }
 
 PlayGame.prototype.draw = function (ctx) {
@@ -1180,14 +1509,18 @@ PlayGame.prototype.draw = function (ctx) {
         ctx.font = "24pt Impact";
         ctx.fillStyle = "black";
         if (this.game.mouse) { ctx.fillStyle = "red"; }
-        if (this.game.score > 40){
+        if (this.game.score > 100){
             ctx.fillText("A winner is Wulf!", this.x, this.y);
         }
-        else if (this.game.health > 0) {
+        else if (this.reset) {
             ctx.fillText("Click to Play!", this.x, this.y);
+			this.game.score = 0;
+			this.game.health = 100;
+			this.game.user.health = 100;
         }
         else {
             ctx.fillText("Wulf Blitzer has been devoured by Frankensteins.", this.x-240, this.y);
+			this.reset = true;
         }
     }
 }
@@ -1256,6 +1589,7 @@ ASSET_MANAGER.queueDownload("./img/miscItems2.png");
 ASSET_MANAGER.queueDownload("./img/Frankenstein.png");
 ASSET_MANAGER.queueDownload("./img/soledad.png");
 ASSET_MANAGER.queueDownload("./img/chuck.png");
+ASSET_MANAGER.queueDownload("./img/projectiles.png");
 
 ASSET_MANAGER.downloadAll(function () {
     console.log("starting up da sheild");
@@ -1332,7 +1666,9 @@ ASSET_MANAGER.downloadAll(function () {
     gameEngine.addEntity(frank4);
     gameEngine.addEntity(frank5);
 
-    gameEngine.addEntity(new ElectricFrank(gameEngine, 250, 100));
+	var boss = new ElectricFrank(gameEngine, 250, 100);
+    gameEngine.addEntity(boss);
+	walls.push(boss);
 
     gameEngine.walls = walls;
     gameEngine.running = false;
